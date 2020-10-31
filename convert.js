@@ -129,7 +129,7 @@ async function getLowerContractions() {
     if (valid(cols[LOWER_MIDDLE])) contractions.middle[letter] = cols[LOWER_MIDDLE];
     if (valid(cols[LOWER_END])) contractions.end[letter] = cols[LOWER_END];
   });
-  console.info(contractions);
+  // console.info(contractions);
   return contractions;
 }
 
@@ -204,7 +204,9 @@ function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, low
     const isWhitespaceOnly = word.match(/^\s+$/);
     const isLongerThanOneLetter = word.length>1;
     if (isWhitespaceOnly || isLongerThanOneLetter) return word;
-    if (alphaContractions.alone[word]) return alphaContractions.alone[word];
+    const contraction = word.toLowerCase();
+    if (alphaContractions.alone[contraction]) return alphaContractions.alone[contraction];
+    if (lowerContractions.alone[contraction]) return lowerContractions.alone[contraction];
     return word;
   }
 
@@ -234,14 +236,6 @@ function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, low
       return `${firstLetter.toUpperCase()}${otherLetters}`;
     });
 
-    Object.keys(lowerContractions.start).forEach( ascii => {
-      const replacement = trimHyphens(lowerContractions.start[ascii]);
-      line = line.replace(new RegExp("\\b(" + ascii + ")([a-z]+)\\b","gi"), (match, start, end) => {
-        const translated = `${replacement}${end}`;
-        return translated;
-      });
-    });
-
     Object.keys(lowerContractions.middle).forEach( ascii => {
       const replacement = trimHyphens(lowerContractions.middle[ascii]);
       line = line.replace(new RegExp("\\b([a-z]+)([" + ascii + "])([a-z]+)\\b","gi"), (match, start, middle, end) => {
@@ -268,14 +262,14 @@ function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, low
     words = words.map(handleContractions);
   
     words = words.map(handlePrefixes);
-    
-    words = words.map(addSingleLetterContractions);
-  
-    words = words.map(applyModifiers);
-
+      
     words = words.map(handleQuotes);
 
+    words = words.map(addSingleLetterContractions);
+
     words = words.map(translateLetters);
+
+    words = words.map(applyModifiers);
 
     // // console.log(`INPUT:  ${words.join('\t')}`);
     // // console.log(`OUTPUT: ${wordsWithLettersTranslated.join('\t')}`);
