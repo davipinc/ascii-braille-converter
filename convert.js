@@ -3,9 +3,12 @@ const { ASCII_GLYPH, BRAILLE_MEANING } = require('./mapping/braille-ascii-column
 const {
   LOWERCASE_LETTER, STANDING_ALONE, WITH_DOTS_5, WITH_DOTS_45, WITH_DOTS_456, WITH_DOTS_46, WITH_DOTS_56
 } = require('./mapping/alphabetic-contractions-columns.js');
-
+const {
+  LOWER_ASCII, LOWER_ALONE, LOWER_START, LOWER_MIDDLE, LOWER_END
+} = require('./mapping/lower-contractions-columns.js');
 const brailleMapFile = `./mapping/braille-ascii.tsv`;
 const alphabeticContractionsFile = `./mapping/alphabetic-contractions.tsv`;
+const lowerContractionsFile = `./mapping/lower-contractions.tsv`;
 
 async function loadFile(fileName = '') {
     const data = await fs.readFile(`./sources/${fileName}`, "ascii");
@@ -59,7 +62,7 @@ async function getMappings() {
   return mappings;
 }
 
-async function getContractions() {
+async function getAlphabeticContractions() {
   const contractionsTable = await fs.readFile(alphabeticContractionsFile, "utf8");
   
   const contractionsArray = arrayOfLines(contractionsTable);
@@ -97,7 +100,40 @@ async function getContractions() {
   return contractions;
 }
 
-function getAsciiVersion(string = '', mappings = {}, contractions = {}) {
+async function getLowerContractions() {
+  const contractionsTable = await fs.readFile(lowerContractionsFile, "utf8");
+  
+  const contractionsArray = arrayOfLines(contractionsTable);
+  const contractions = {
+    alone: {},
+    start: {},
+    middle: {},
+    end: {}
+  };
+
+  function valid(string = '') {
+    if (string === '…') return false;
+    return Boolean(string);
+  }
+
+  contractionsArray.forEach( row => {
+    const isBlankLine = row.replace(/\s/g, '') === '';
+    if (isBlankLine) {
+      return;
+    }
+
+    const cols = row.split(/\t/);
+    const letter = cols[LOWER_ASCII];
+    if (valid(cols[LOWER_ALONE])) contractions.alone[letter] = cols[LOWER_ALONE];
+    if (valid(cols[LOWER_START])) contractions.start[letter] = cols[LOWER_START];
+    if (valid(cols[LOWER_MIDDLE])) contractions.middle[letter] = cols[LOWER_MIDDLE];
+    if (valid(cols[LOWER_END])) contractions.end[letter] = cols[LOWER_END];
+  });
+  console.info(contractions);
+  return contractions;
+}
+
+function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, lowerContractions = {}) {
   const lines = arrayOfLines(string);
 
   function translateLetters(word) {
@@ -134,12 +170,12 @@ function getAsciiVersion(string = '', mappings = {}, contractions = {}) {
 
     const dotType = dotTypes[suffixCharacter.toLowerCase()];
 
-    if (!contractions[dotType]) {
+    if (!alphaContractions[dotType]) {
       console.warn(`No dotType for ${suffixCharacter}`);
       return '';
     }
 
-    const suffix = contractions[dotType][suffixLetter];
+    const suffix = alphaContractions[dotType][suffixLetter];
 
     if (!suffix) {
       console.warn(`No suffix for type: '${dotType}', letter: '${suffixLetter}'`);
@@ -168,7 +204,7 @@ function getAsciiVersion(string = '', mappings = {}, contractions = {}) {
     const isWhitespaceOnly = word.match(/^\s+$/);
     const isLongerThanOneLetter = word.length>1;
     if (isWhitespaceOnly || isLongerThanOneLetter) return word;
-    if (contractions.alone[word]) return contractions.alone[word];
+    if (alphaContractions.alone[word]) return alphaContractions.alone[word];
     return word;
   }
 
@@ -186,9 +222,48 @@ function getAsciiVersion(string = '', mappings = {}, contractions = {}) {
     return word;
   }
 
+  function trimHyphens(string = '') {
+    if (string.length === 1) {
+      return string;
+    }
+    return string.replace(/^-/, '').replace(/-$/, '');   
+  }
+
+  function applyLowers(line = '') {
+    line = line.replace(/\b",(.)(.+)\b/g, (match, firstLetter, otherLetters) => {
+      return `${firstLetter.toUpperCase()}${otherLetters}`;
+    });
+
+    Object.keys(lowerContractions.start).forEach( ascii => {
+      const replacement = trimHyphens(lowerContractions.start[ascii]);
+      line = line.replace(new RegExp("\\b(" + ascii + ")([a-z]+)\\b","gi"), (match, start, end) => {
+        const translated = `${replacement}${end}`;
+        return translated;
+      });
+    });
+
+    Object.keys(lowerContractions.middle).forEach( ascii => {
+      const replacement = trimHyphens(lowerContractions.middle[ascii]);
+      line = line.replace(new RegExp("\\b([a-z]+)([" + ascii + "])([a-z]+)\\b","gi"), (match, start, middle, end) => {
+        const translated = `${start}${replacement}${end}`;
+        return translated;
+      });
+    });
+        
+    Object.keys(lowerContractions.end).forEach( ascii => {
+      const replacement = trimHyphens(lowerContractions.end[ascii]);
+      line = line.replace(new RegExp("\\b([a-z]+)(" + ascii + ")\\b","gi"), (match, start, end) => {
+        const translated = `${start}${replacement}`;
+        return translated;
+      });
+    });
+    return line;    
+  }
   function convertLine(inputLine) {
 
-    let words = breakBySpaces(inputLine);
+    const lowerProcessedLine = applyLowers(inputLine);
+
+    let words = breakBySpaces(lowerProcessedLine);
 
     words = words.map(handleContractions);
   
@@ -210,18 +285,7 @@ function getAsciiVersion(string = '', mappings = {}, contractions = {}) {
 
     // console.log(words);
     let line = words.join(' ');
-    line = line.replace(/\b",(.)(.+)\b/g, (match, firstLetter, otherLetters) => {
-      return `${firstLetter.toUpperCase()}${otherLetters}`;
-    });
-
-
-    line = line.replace(new RegExp("\\b([a-z]+)(" + ',' + ")([a-z]+)\\b","gi"), (match, start, middle, end) => {
-      const middleMod = 'ea';
-      console.log(`${start}${middleMod}${end}`);
-      console.log('---------------------------------');
-      return `${start}${middleMod}${end}`;
-    });
-        
+    
     return line;
   }
 
@@ -232,9 +296,10 @@ function getAsciiVersion(string = '', mappings = {}, contractions = {}) {
 async function convert(fileName = '') {
   console.info(`File: ${fileName}`);
   const mappings = await getMappings();
-  const contractions = await getContractions();
+  const alphaContractions = await getAlphabeticContractions();
+  const lowerContractions = await getLowerContractions();
   const fileContents = await loadFile(fileName);
-  const asciiVersion = getAsciiVersion(fileContents.toLowerCase(), mappings, contractions);
+  const asciiVersion = getAsciiVersion(fileContents.toLowerCase(), mappings, alphaContractions, lowerContractions);
   console.log(asciiVersion);
 }
 
