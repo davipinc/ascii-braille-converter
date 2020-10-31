@@ -1,7 +1,4 @@
-20	(space)	000000	⠀ (braille pattern blank)	⠀	(space)
 21	!	011011	⠮ (braille pattern dots-2346)	⠮	the
-22	"	000100	⠐ (braille pattern dots-5)	⠐	(contraction)
-23	#	010111	⠼ (braille pattern dots-3456)	⠼	(number prefix)
 24	$	111001	⠫ (braille pattern dots-1246)	⠫	ed
 25	%	110001	⠩ (braille pattern dots-146)	⠩	sh
 26	&	111011	⠯ (braille pattern dots-12346)	⠯	and
@@ -10,9 +7,7 @@
 29	)	011111	⠾ (braille pattern dots-23456)	⠾	with
 2A	*	100001	⠡ (braille pattern dots-16)	⠡	ch
 2B	+	010011	⠬ (braille pattern dots-346)	⠬	ing
-2C	,	000001	⠠ (braille pattern dots-6)	⠠	(uppercase prefix)
 2D	-	000011	⠤ (braille pattern dots-36)	⠤	-
-2E	.	010001	⠨ (braille pattern dots-46)	⠨	(italic prefix)
 2F	/	010010	⠌ (braille pattern dots-34)	⠌	st
 30	0	000111	⠴ (braille pattern dots-356)	⠴	”
 31	1	001000	⠂ (braille pattern dots-2)	⠂	,
@@ -21,16 +16,14 @@
 34	4	001101	⠲ (braille pattern dots-256)	⠲	.
 35	5	001001	⠢ (braille pattern dots-26)	⠢	en
 36	6	001110	⠖ (braille pattern dots-235)	⠖	!
-37	7	001111	⠶ (braille pattern dots-2356)	⠶	( or )
-38	8	001011	⠦ (braille pattern dots-236)	⠦	“ or ?
+37	7	001111	⠶ (braille pattern dots-2356)	⠶	(	( or )
+38	8	001011	⠦ (braille pattern dots-236)	⠦	"	strictly “ or ?
 39	9	000110	⠔ (braille pattern dots-35)	⠔	in
 3A	:	100101	⠱ (braille pattern dots-156)	⠱	wh
-3B	;	000101	⠰ (braille pattern dots-56)	⠰	(letter prefix)
 3C	<	101001	⠣ (braille pattern dots-126)	⠣	gh
 3D	=	111111	⠿ (braille pattern dots-123456)	⠿	for
 3E	>	010110	⠜ (braille pattern dots-345)	⠜	ar
 3F	?	110101	⠹ (braille pattern dots-1456)	⠹	th
-40	@	010000	⠈ (braille pattern dots-4)	⠈	(accent prefix)
 41	A	100000	⠁ (braille pattern dots-1)	⠁	a
 42	B	101000	⠃ (braille pattern dots-12)	⠃	b
 43	C	110000	⠉ (braille pattern dots-14)	⠉	c
@@ -60,8 +53,5 @@
 5B	[	011001	⠪ (braille pattern dots-246)	⠪	ow
 5C	\	101101	⠳ (braille pattern dots-1256)	⠳	ou
 5D	]	111101	⠻ (braille pattern dots-12456)	⠻	er
-5E	^	010100	⠘ (braille pattern dots-45)	⠘	(currency prefix)
-5F	_	010101	⠸ (braille pattern dots-456)	⠸	(contraction)
 7B 	{	?	⠪ (braille pattern dots-246)	⠪	ow
 7D 	}	?	⠡ (braille pattern dots-16)	⠡	ch
-5F	'	?	⠠ (braille pattern dots-6)	⠠	(capitalise)

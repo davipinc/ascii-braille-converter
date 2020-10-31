@@ -12,22 +12,14 @@ async function loadFile(fileName = '') {
     return data.toString();
 }
 
-const bracketedEffects = {
-  '(space)': word => ` ${word}`,
-  '(contraction)': word => `CONTRACTED: ${word}`,
-  '(number prefix)': word => `NUM: ${word}`,
-  '(uppercase prefix)': word => `${word.charAt(0).toUpperCase()}${word.substring(1)}`,
-  '(italic prefix)': word => `<em>${word}</em>`,
-  '(letter prefix)': word => word
-};
+const UPPERCASE_MODIFIER = ',';
 
 function getGlyphEffect(meaning) {
   if (typeof meaning !== 'string') {
     throw new Error('Glyph meaning must be a string');
   }
-  const defaultFunction = () => `<!-- UNKNOWN: ${meaning} -->`;
   if (meaning.charAt(0) === '(') {
-    return bracketedEffects.meaning || defaultFunction;
+    return null;
   }
   return meaning;
 }
@@ -37,7 +29,7 @@ function arrayOfLines(fileString = '') {
 }
 
 function breakBySpaces(line = '') {
-  return line.split(/ /);
+  return line.split(/\s+/);
 }
 
 async function getMappings() {
@@ -62,8 +54,6 @@ async function getMappings() {
     
     if (typeof effect === 'string') {
       mappings.chars[asciiGlyph] = effect;
-    } else {
-      mappings.funcs[asciiGlyph] = effect;
     }
   });
   return mappings;
@@ -103,7 +93,7 @@ async function getContractions() {
     if (valid(cols[WITH_DOTS_46])) contractions.dots_46[letter] = cols[WITH_DOTS_46];
     if (valid(cols[WITH_DOTS_56])) contractions.dots_56[letter] = cols[WITH_DOTS_56];
   });
-  console.info(contractions);
+  // console.info(contractions);
   return contractions;
 }
 
@@ -121,7 +111,7 @@ function getAsciiVersion(string = '', mappings = {}, contractions = {}) {
       }
       if (mappings.chars[match.toUpperCase()]) {
         // this is just a simple A-Z but in uppercase
-        return match;
+        return match.toLowerCase();
       }
       return match;
     });
@@ -137,8 +127,35 @@ function getAsciiVersion(string = '', mappings = {}, contractions = {}) {
   };
 
   function getSuffixLetters(suffixCharacter = '', suffixLetter = '') {
-    const dotType = dotTypes[suffixCharacter];
-    return contractions[dotType][suffixLetter].replace(/^-/, '') || '??';
+    if (suffixCharacter === UPPERCASE_MODIFIER) {
+      console.warn('1', suffixCharacter, suffixLetter);
+      return '';
+    }
+
+    const dotType = dotTypes[suffixCharacter.toLowerCase()];
+
+    if (!contractions[dotType]) {
+      console.warn(`No dotType for ${suffixCharacter}`);
+      return '';
+    }
+
+    const suffix = contractions[dotType][suffixLetter];
+
+    if (!suffix) {
+      console.warn(`No suffix for type: '${dotType}', letter: '${suffixLetter}'`);
+      return '';
+    }
+    
+    const noLeadingHyphenSuffix = suffix.replace(/^-/, '');
+
+    return noLeadingHyphenSuffix;
+  }
+
+  function handleContractions(word = '') {
+    return word.replace(/(["^;_])([a-z!])/ig, (match, dotType, suffixCharacter) => {
+      console.log('> > >', dotType, suffixCharacter);
+      return getSuffixLetters(dotType, suffixCharacter);
+    });
   }
 
   function handlePrefixes(word = '') {
@@ -148,39 +165,76 @@ function getAsciiVersion(string = '', mappings = {}, contractions = {}) {
   }
 
   function addSingleLetterContractions(word = '') {
+    const isWhitespaceOnly = word.match(/^\s+$/);
+    const isLongerThanOneLetter = word.length>1;
+    if (isWhitespaceOnly || isLongerThanOneLetter) return word;
     if (contractions.alone[word]) return contractions.alone[word];
     return word;
   }
 
-  function convertLine(line) {
-    const words = breakBySpaces(line);
-    const wordsWithLettersTranslated = words.map(translateLetters);
-  
-    // console.log(`INPUT:  ${words.join('\t')}`);
-    // console.log(`OUTPUT: ${wordsWithLettersTranslated.join('\t')}`);
+  function applyModifiers(word = '') {
+    if (word.charAt(0) === UPPERCASE_MODIFIER) {
+      return `${word.charAt(1).toUpperCase()}${word.substring(2)}`;
+    }  
+    return word;
+  }
 
-    const wordsWithPrefixesTranslated = wordsWithLettersTranslated.map(handlePrefixes);
+  function handleQuotes(word) {
+    if (word.charAt(0) === '"' && word.charAt(1) === ',') {
+      return `"${word.charAt(2).toUpperCase()}${word.substring(3)}`;
+    }
+    return word;
+  }
+
+  function convertLine(inputLine) {
+
+    let words = breakBySpaces(inputLine);
+
+    words = words.map(handleContractions);
+  
+    words = words.map(handlePrefixes);
+    
+    words = words.map(addSingleLetterContractions);
+  
+    words = words.map(applyModifiers);
+
+    words = words.map(handleQuotes);
+
+    words = words.map(translateLetters);
+
+    // // console.log(`INPUT:  ${words.join('\t')}`);
+    // // console.log(`OUTPUT: ${wordsWithLettersTranslated.join('\t')}`);
 
     // console.log(`INPUT:  ${wordsWithLettersTranslated.join('\t')}`);
     // console.log(`OUTPUT: ${wordsWithPrefixesTranslated.join('\t')}`);
 
-    const wordsWithSingleLetterContractions = wordsWithPrefixesTranslated.map(addSingleLetterContractions);
+    // console.log(words);
+    let line = words.join(' ');
+    line = line.replace(/\b",(.)(.+)\b/g, (match, firstLetter, otherLetters) => {
+      return `${firstLetter.toUpperCase()}${otherLetters}`;
+    });
 
-    // console.log(`INPUT:  ${wordsWithPrefixesTranslated.join('\t')}`);
-    // console.log(`OUTPUT: ${wordsWithSingleLetterContractions.join('\t')}`);
 
-    return wordsWithSingleLetterContractions.join(' ');      
+    line = line.replace(new RegExp("\\b([a-z]+)(" + ',' + ")([a-z]+)\\b","gi"), (match, start, middle, end) => {
+      const middleMod = 'ea';
+      console.log(`${start}${middleMod}${end}`);
+      console.log('---------------------------------');
+      return `${start}${middleMod}${end}`;
+    });
+        
+    return line;
   }
 
   const translatedLines = lines.map(convertLine).join('\n');
   return translatedLines;
 }
+
 async function convert(fileName = '') {
   console.info(`File: ${fileName}`);
   const mappings = await getMappings();
   const contractions = await getContractions();
   const fileContents = await loadFile(fileName);
-  const asciiVersion = getAsciiVersion(fileContents, mappings, contractions);
+  const asciiVersion = getAsciiVersion(fileContents.toLowerCase(), mappings, contractions);
   console.log(asciiVersion);
 }
 
@@ -188,7 +242,6 @@ const inputFile = process.argv[2];
 convert(inputFile);
 
 module.exports = {
-  getGlyphEffect,
   convert
 };
 
