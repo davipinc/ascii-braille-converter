@@ -1,0 +1,21 @@
+{
+  "name": "brf-to-ascii",
+  "version": "1.0.0",
+  "description": "Braille Ready Format to ASCII Converter",
+  "main": "converter.js",
+  "dependencies": {},
+  "devDependencies": {
+    "eslint": "^7.12.1",
+    "eslint-config-airbnb": "^18.2.0",
+    "eslint-plugin-jest": "^24.1.0",
+    "jest": "^26.6.1"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "braille"
+  ],
+  "author": "David Pinching",
+  "license": "ISC"
+}

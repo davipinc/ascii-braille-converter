@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "target": "ES2017",
+        "experimentalDecorators": true,
+        "baseUrl": "./",
+        "outDir": "target",
+        "allowJs": true,
+        "checkJs": true,
+        "esModuleInterop": true,
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
+        "lib": [
+            "es2017",
+            "dom"
+        ]
+    },
+    "exclude": [
+        "**/node_modules/*"
+    ]
+}
