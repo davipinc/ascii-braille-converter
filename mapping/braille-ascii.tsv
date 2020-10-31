@@ -62,5 +62,6 @@
 5D	]	111101	⠻ (braille pattern dots-12456)	⠻	er
 5E	^	010100	⠘ (braille pattern dots-45)	⠘	(currency prefix)
 5F	_	010101	⠸ (braille pattern dots-456)	⠸	(contraction)
-7B 	{	?	?	?	
+7B 	{	?	⠪ (braille pattern dots-246)	⠪	ow
 7D 	}	?	⠡ (braille pattern dots-16)	⠡	ch
+5F	'	?	⠠ (braille pattern dots-6)	⠠	(capitalise)

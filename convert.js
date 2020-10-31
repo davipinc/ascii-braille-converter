@@ -1,29 +1,24 @@
 const fs = require('fs').promises;
+const { ASCII_GLYPH, BRAILLE_MEANING } = require('./mapping/braille-ascii-columns.js');
+const {
+  LOWERCASE_LETTER, STANDING_ALONE, WITH_DOTS_5, WITH_DOTS_45, WITH_DOTS_456, WITH_DOTS_46, WITH_DOTS_56
+} = require('./mapping/alphabetic-contractions-columns.js');
 
 const brailleMapFile = `./mapping/braille-ascii.tsv`;
+const alphabeticContractionsFile = `./mapping/alphabetic-contractions.tsv`;
 
 async function loadFile(fileName = '') {
     const data = await fs.readFile(`./sources/${fileName}`, "ascii");
     return data.toString();
 }
 
-// eslint-disable-next-line no-unused-vars
-const ASCII_HEX = 0;
-const ASCII_GLYPH = 1;
-// eslint-disable-next-line no-unused-vars
-const BRAILLE_DOTS = 2;
-// eslint-disable-next-line no-unused-vars
-const BRAILLE_GLYPH = 3;
-// eslint-disable-next-line no-unused-vars
-const UNICODE_BRAILLE = 4;
-const BRAILLE_MEANING = 5;
-
 const bracketedEffects = {
-  '(space)': next => ` ${next}`,
-  '(contraction)': next => `CONTRACTED: ${next}`,
-  '(number prefix)': next => `NUM: ${next}`,
-  '(uppercase prefix)': next => `${next.charAt(0).toUpperCase()}${next.substring(1)}`,
-  '(italic prefix)': next => `<em>${next}</em>`
+  '(space)': word => ` ${word}`,
+  '(contraction)': word => `CONTRACTED: ${word}`,
+  '(number prefix)': word => `NUM: ${word}`,
+  '(uppercase prefix)': word => `${word.charAt(0).toUpperCase()}${word.substring(1)}`,
+  '(italic prefix)': word => `<em>${word}</em>`,
+  '(letter prefix)': word => word
 };
 
 function getGlyphEffect(meaning) {
@@ -47,6 +42,7 @@ function breakBySpaces(line = '') {
 
 async function getMappings() {
   const mappingTable = await fs.readFile(brailleMapFile, "utf8");
+  
   const mappingsArray = arrayOfLines(mappingTable);
   const mappings = {
     chars: {},
@@ -73,10 +69,48 @@ async function getMappings() {
   return mappings;
 }
 
-async function getAsciiVersion(string = '', mappings = {}) {
+async function getContractions() {
+  const contractionsTable = await fs.readFile(alphabeticContractionsFile, "utf8");
+  
+  const contractionsArray = arrayOfLines(contractionsTable);
+  const contractions = {
+    alone: {},
+    dots_5: {},
+    dots_45: {},
+    dots_456: {},
+    dots_46: {},
+    dots_56: {}
+  };
+
+  function valid(string = '') {
+    if (string === '…') return false;
+    return Boolean(string);
+  }
+
+  contractionsArray.forEach( row => {
+    const isBlankLine = row.replace(/\s/g, '') === '';
+    if (isBlankLine) {
+      return;
+    }
+
+    const cols = row.split(/\t/);
+    const letter = cols[LOWERCASE_LETTER];
+
+    if (valid(cols[STANDING_ALONE])) contractions.alone[letter] = cols[STANDING_ALONE];
+    if (valid(cols[WITH_DOTS_5])) contractions.dots_5[letter] = cols[WITH_DOTS_5];
+    if (valid(cols[WITH_DOTS_45])) contractions.dots_45[letter] = cols[WITH_DOTS_45];
+    if (valid(cols[WITH_DOTS_456])) contractions.dots_456[letter] = cols[WITH_DOTS_456];
+    if (valid(cols[WITH_DOTS_46])) contractions.dots_46[letter] = cols[WITH_DOTS_46];
+    if (valid(cols[WITH_DOTS_56])) contractions.dots_56[letter] = cols[WITH_DOTS_56];
+  });
+  console.info(contractions);
+  return contractions;
+}
+
+function getAsciiVersion(string = '', mappings = {}, contractions = {}) {
   const lines = arrayOfLines(string);
 
-  function convertWord(word) {
+  function translateLetters(word) {
     const translated = word.replace(/./g, match => {
       if (mappings.chars[match]) {
         if (mappings.chars[match] === match.toLowerCase()) {
@@ -89,31 +123,64 @@ async function getAsciiVersion(string = '', mappings = {}) {
         // this is just a simple A-Z but in uppercase
         return match;
       }
-      // console.warn(`No map for ${match}`);
       return match;
     });
 
     return translated;
   }
 
-  function convertLine(line) {
-    const words = breakBySpaces(line);
-    const translatedLine = words.map(convertWord).join('\t');
-  
-    console.log(`INPUT:  ${words.join('\t')}`);
-    console.log(`OUTPUT: ${translatedLine}`);
+  const dotTypes = {
+    '"': 'dots_5',
+    '^': 'dots_45',
+    ';': 'dots_56',
+    '_': 'dots_456'
+  };
 
-    return translatedLine;      
+  function getSuffixLetters(suffixCharacter = '', suffixLetter = '') {
+    const dotType = dotTypes[suffixCharacter];
+    return contractions[dotType][suffixLetter].replace(/^-/, '') || '??';
   }
 
-  const translatedLines = lines.map(convertLine).join('');
+  function handlePrefixes(word = '') {
+    return word.replace(/\b(.+?)([.;])(.+?)\b/g, (match, prefix, suffixCharacter, suffix) => {
+      return `${prefix}${getSuffixLetters(suffixCharacter, suffix)}`;
+    });
+  }
+
+  function addSingleLetterContractions(word = '') {
+    if (contractions.alone[word]) return contractions.alone[word];
+    return word;
+  }
+
+  function convertLine(line) {
+    const words = breakBySpaces(line);
+    const wordsWithLettersTranslated = words.map(translateLetters);
+  
+    // console.log(`INPUT:  ${words.join('\t')}`);
+    // console.log(`OUTPUT: ${wordsWithLettersTranslated.join('\t')}`);
+
+    const wordsWithPrefixesTranslated = wordsWithLettersTranslated.map(handlePrefixes);
+
+    // console.log(`INPUT:  ${wordsWithLettersTranslated.join('\t')}`);
+    // console.log(`OUTPUT: ${wordsWithPrefixesTranslated.join('\t')}`);
+
+    const wordsWithSingleLetterContractions = wordsWithPrefixesTranslated.map(addSingleLetterContractions);
+
+    // console.log(`INPUT:  ${wordsWithPrefixesTranslated.join('\t')}`);
+    // console.log(`OUTPUT: ${wordsWithSingleLetterContractions.join('\t')}`);
+
+    return wordsWithSingleLetterContractions.join(' ');      
+  }
+
+  const translatedLines = lines.map(convertLine).join('\n');
   return translatedLines;
 }
 async function convert(fileName = '') {
   console.info(`File: ${fileName}`);
   const mappings = await getMappings();
+  const contractions = await getContractions();
   const fileContents = await loadFile(fileName);
-  const asciiVersion = getAsciiVersion(fileContents, mappings);
+  const asciiVersion = getAsciiVersion(fileContents, mappings, contractions);
   console.log(asciiVersion);
 }
 
