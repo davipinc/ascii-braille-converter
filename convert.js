@@ -15,6 +15,7 @@ async function loadFile(fileName = '') {
     return data.toString();
 }
 
+const START_QUOTE = '"';
 const UPPERCASE_MODIFIER = ',';
 
 function getGlyphEffect(meaning) {
@@ -211,6 +212,11 @@ function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, low
   }
 
   function applyModifiers(word = '') {
+    if (word.substring(0,2) === `${START_QUOTE}${UPPERCASE_MODIFIER}`) {
+      // TODO: handle 2-3 uppercase modifiers
+      return `${START_QUOTE}${word.charAt(2).toUpperCase()}${word.substring(3)}`;
+    }  
+
     if (word.charAt(0) === UPPERCASE_MODIFIER) {
       return `${word.charAt(1).toUpperCase()}${word.substring(2)}`;
     }  
@@ -271,13 +277,8 @@ function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, low
 
     words = words.map(applyModifiers);
 
-    // // console.log(`INPUT:  ${words.join('\t')}`);
-    // // console.log(`OUTPUT: ${wordsWithLettersTranslated.join('\t')}`);
+    console.log(words);
 
-    // console.log(`INPUT:  ${wordsWithLettersTranslated.join('\t')}`);
-    // console.log(`OUTPUT: ${wordsWithPrefixesTranslated.join('\t')}`);
-
-    // console.log(words);
     let line = words.join(' ');
     
     return line;
