@@ -18,6 +18,12 @@ async function loadFile(fileName = '') {
 const START_QUOTE = '"';
 const UPPERCASE_MODIFIER = ',';
 
+const reportArray = [];
+
+function report(string = '') {
+  reportArray.push(string);
+}
+
 function getGlyphEffect(meaning) {
   if (typeof meaning !== 'string') {
     throw new Error('Glyph meaning must be a string');
@@ -160,15 +166,11 @@ function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, low
     '"': 'dots_5',
     '^': 'dots_45',
     ';': 'dots_56',
-    '_': 'dots_456'
+    '_': 'dots_456',
+    '.': 'dots_'
   };
 
   function getSuffixLetters(suffixCharacter = '', suffixLetter = '') {
-    if (suffixCharacter === UPPERCASE_MODIFIER) {
-      console.warn('1', suffixCharacter, suffixLetter);
-      return '';
-    }
-
     const dotType = dotTypes[suffixCharacter.toLowerCase()];
 
     if (!alphaContractions[dotType]) {
@@ -179,7 +181,7 @@ function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, low
     const suffix = alphaContractions[dotType][suffixLetter];
 
     if (!suffix) {
-      console.warn(`No suffix for type: '${dotType}', letter: '${suffixLetter}'`);
+      report(`No suffix for type: '${dotType}', letter: '${suffixLetter}'`);
       return '';
     }
     
@@ -190,13 +192,12 @@ function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, low
 
   function handleContractions(word = '') {
     return word.replace(/(["^;_])([a-z!])/ig, (match, dotType, suffixCharacter) => {
-      console.log('> > >', dotType, suffixCharacter);
       return getSuffixLetters(dotType, suffixCharacter);
     });
   }
 
   function handlePrefixes(word = '') {
-    return word.replace(/\b(.+?)([.;])(.+?)\b/g, (match, prefix, suffixCharacter, suffix) => {
+    return word.replace(/\b(.+?)([;])(.+?)\b/g, (match, prefix, suffixCharacter, suffix) => {
       return `${prefix}${getSuffixLetters(suffixCharacter, suffix)}`;
     });
   }
@@ -277,12 +278,18 @@ function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, low
 
     words = words.map(applyModifiers);
 
-    console.log(words);
+    // TODO: handle numbers
+    // TODO: Final Groupsign
+    // TODO: Strong Groupsigns/Wordsigns
+    
+    // console.log(words);
 
     let line = words.join(' ');
     
     return line;
   }
+
+  console.info(`${lines.length} lines processed`);
 
   const translatedLines = lines.map(convertLine).join('\n');
   return translatedLines;
@@ -295,7 +302,12 @@ async function convert(fileName = '') {
   const lowerContractions = await getLowerContractions();
   const fileContents = await loadFile(fileName);
   const asciiVersion = getAsciiVersion(fileContents.toLowerCase(), mappings, alphaContractions, lowerContractions);
-  console.log(asciiVersion);
+  await fs.writeFile(`./output/${fileName}`, asciiVersion, "utf8");
+
+  if (reportArray.length) {
+    await fs.writeFile(`./output/${fileName}-report`, reportArray.join('\n'), "utf8");
+    console.info(`${reportArray.length} warning(s)`);
+  }
 }
 
 const inputFile = process.argv[2];
