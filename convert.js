@@ -11,8 +11,8 @@ const alphabeticContractionsFile = `./mapping/alphabetic-contractions.tsv`;
 const lowerContractionsFile = `./mapping/lower-contractions.tsv`;
 
 async function loadFile(fileName = '') {
-    const data = await fs.readFile(`./sources/${fileName}`, "ascii");
-    return data.toString();
+  const data = await fs.readFile(`./sources/${fileName}`, "ascii");
+  return data.toString();
 }
 
 const START_QUOTE = '"';
@@ -140,8 +140,14 @@ async function getLowerContractions() {
   return contractions;
 }
 
-function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, lowerContractions = {}) {
-  const lines = arrayOfLines(string);
+function getAsciiVersion(
+    options = {}, 
+    string = '',
+    mappings = {},
+    alphaContractions = {},
+    lowerContractions = {}
+  ) {
+  const lines = arrayOfLines(options.forceLowercaseOnInput ? string.toLowerCase() : string);
 
   function translateLetters(word) {
     const translated = word.replace(/./g, match => {
@@ -253,7 +259,7 @@ function getAsciiVersion(string = '', mappings = {}, alphaContractions = {}, low
         
     Object.keys(lowerContractions.end).forEach( ascii => {
       const replacement = trimHyphens(lowerContractions.end[ascii]);
-      line = line.replace(new RegExp("\\b([a-z]+)(" + ascii + ")\\b","gi"), (match, start, end) => {
+      line = line.replace(new RegExp("\\b([a-z]+)(" + ascii + ")\\b","gi"), (match, start) => {
         const translated = `${start}${replacement}`;
         return translated;
       });
@@ -301,7 +307,18 @@ async function convert(fileName = '') {
   const alphaContractions = await getAlphabeticContractions();
   const lowerContractions = await getLowerContractions();
   const fileContents = await loadFile(fileName);
-  const asciiVersion = getAsciiVersion(fileContents.toLowerCase(), mappings, alphaContractions, lowerContractions);
+  const isFormalBRF = fileName.toLowerCase().indexOf('.brf') >= 0;
+  const options = {
+    forceLowercaseOnInput: isFormalBRF
+  };
+
+  const asciiVersion = getAsciiVersion(
+    options, 
+    fileContents,
+    mappings,
+    alphaContractions,
+    lowerContractions
+  );
   await fs.writeFile(`./output/${fileName}`, asciiVersion, "utf8");
 
   if (reportArray.length) {
