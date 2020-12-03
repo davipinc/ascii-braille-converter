@@ -6,9 +6,15 @@ const {
 const {
   LOWER_ASCII, LOWER_ALONE, LOWER_START, LOWER_MIDDLE, LOWER_END
 } = require('./mapping/lower-contractions-columns.js');
+const {
+  LONGFORM, SHORTFORM
+} = require('./mapping/shortforms.js');
+
 const brailleMapFile = `./mapping/braille-ascii.tsv`;
 const alphabeticContractionsFile = `./mapping/alphabetic-contractions.tsv`;
 const lowerContractionsFile = `./mapping/lower-contractions.tsv`;
+const shortFormsFile = `./mapping/shortforms.tsv`;
+
 
 async function loadFile(fileName = '') {
   const data = await fs.readFile(`./sources/${fileName}`, "ascii");
@@ -140,12 +146,37 @@ async function getLowerContractions() {
   return contractions;
 }
 
+function removeBrackets(string) {
+  return string.replace(/[()]/g, '');
+}
+
+async function getShortForms() {
+  const shortFormsTable = await fs.readFile(shortFormsFile, "utf8");
+  
+  const shortFormsArray = arrayOfLines(shortFormsTable);
+  const shortForms = {};
+
+  shortFormsArray.map( row => {
+    const isBlankLine = row.replace(/\s/g, '') === '';
+    if (isBlankLine) {
+      return;
+    }    
+    const cols = row.split(/\t/);
+    const shortForm = removeBrackets(cols[SHORTFORM]);
+    const longForm = cols[LONGFORM];
+    shortForms[shortForm] = longForm;
+  });
+  // console.info('shortForms', shortForms);
+  return shortForms;
+}
+
 function getAsciiVersion(
     options = {}, 
     string = '',
     mappings = {},
     alphaContractions = {},
-    lowerContractions = {}
+    lowerContractions = {},
+    shortForms = {}
   ) {
   const lines = arrayOfLines(options.forceLowercaseOnInput ? string.toLowerCase() : string);
 
@@ -266,6 +297,11 @@ function getAsciiVersion(
     });
     return line;    
   }
+
+  function addShortForms(word) {
+    return shortForms[word] || word;
+  }
+
   function convertLine(inputLine) {
 
     const lowerProcessedLine = applyLowers(inputLine);
@@ -283,6 +319,8 @@ function getAsciiVersion(
     words = words.map(translateLetters);
 
     words = words.map(applyModifiers);
+
+    words = words.map(addShortForms);
 
     // TODO: handle numbers
     // TODO: Final Groupsign
@@ -306,6 +344,7 @@ async function convert(fileName = '') {
   const mappings = await getMappings();
   const alphaContractions = await getAlphabeticContractions();
   const lowerContractions = await getLowerContractions();
+  const shortForms = await getShortForms();
   const fileContents = await loadFile(fileName);
   const isFormalBRF = fileName.toLowerCase().indexOf('.brf') >= 0;
   const options = {
@@ -317,7 +356,8 @@ async function convert(fileName = '') {
     fileContents,
     mappings,
     alphaContractions,
-    lowerContractions
+    lowerContractions,
+    shortForms
   );
   await fs.writeFile(`./output/${fileName}`, asciiVersion, "utf8");
 
