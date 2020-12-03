@@ -9,6 +9,7 @@ const {
 const {
   LONGFORM, SHORTFORM
 } = require('./mapping/shortforms.js');
+const dictionary = require('./dictionary/words_dictionary.json');
 
 const brailleMapFile = `./mapping/braille-ascii.tsv`;
 const alphabeticContractionsFile = `./mapping/alphabetic-contractions.tsv`;
@@ -23,6 +24,10 @@ async function loadFile(fileName = '') {
 
 const START_QUOTE = '"';
 const UPPERCASE_MODIFIER = ',';
+
+const punct = `[,.-?'"”]`;  
+const leadingPunctuationRegExp = new RegExp(`^${punct}+`);
+const trailingPunctuationRegExp = new RegExp(`${punct}+$`);
 
 const reportArray = [];
 
@@ -146,6 +151,14 @@ async function getLowerContractions() {
   return contractions;
 }
 
+function trimPunctuation(word) {
+  return word.replace(leadingPunctuationRegExp, '').replace(trailingPunctuationRegExp, '');
+}
+
+function wordExists(word) {
+  return dictionary[trimPunctuation(word.toLowerCase())];
+} 
+
 function removeBrackets(string) {
   return string.replace(/[()]/g, '');
 }
@@ -155,6 +168,16 @@ async function getShortForms() {
   
   const shortFormsArray = arrayOfLines(shortFormsTable);
   const shortForms = {};
+  function longestToShortest(shortFormObjectA, shortFormObjectB) {
+    const colsA = shortFormObjectA.split(/\t/);
+    const colsB = shortFormObjectB.split(/\t/);
+    const shortFormA = removeBrackets(colsA[SHORTFORM]);
+    const shortFormB = removeBrackets(colsB[SHORTFORM]);
+    return shortFormA.length > shortFormB.length ? -1 : 1;
+  }
+
+  // order by length so "acr" is used in preference to "ac", for example
+  shortFormsArray.sort(longestToShortest);
 
   shortFormsArray.map( row => {
     const isBlankLine = row.replace(/\s/g, '') === '';
@@ -298,15 +321,63 @@ function getAsciiVersion(
     return line;    
   }
 
-  function addShortForms(word) {
-    return shortForms[word] || word;
+  function addShortFormWholeWords(word) {
+    if (shortForms[word]) {
+      // console.log('SFWW', word, shortForms[word]);
+      return shortForms[word];
+    }
+    return word;
   }
 
+  const psvShortForms = Object.keys(shortForms).join('|');
+  const shortFormRegExp = new RegExp(`(?:${punct}+)?(${psvShortForms})(?:${punct}+)?`, 'ig');
+
+  function replaceAllShortForms(word) {
+    // eslint-disable-next-line no-unused-vars
+    const shortFormised = word.replace(shortFormRegExp, (_match = '', part, index) => {
+      const shortFormWordPart = shortForms[part.toLowerCase()];
+      const nextChar = word.charAt(index + part.length);
+      const noVowelsAfterThis = ['after', 'blind', 'friend'].indexOf(shortFormWordPart) >=0;
+      if (noVowelsAfterThis && nextChar.match(/[aeiouy]/i)) {
+        // super-specific vowel rule (see http://www.brl.org/intro/session09/short.html)
+        return part;
+      }
+      return shortFormWordPart;
+    });
+    
+    if (wordExists(shortFormised)) {
+      return shortFormised;
+    }
+    // report(`NOT RISKING THIS: ${shortFormised}`);
+    return word;    
+  }
+
+
+  function addShortFormPartWords(word) {
+    if (!shortFormRegExp.exec(word)) {
+      // no short forms here
+      return word;
+    }
+
+    if (wordExists(word)) {
+      // this is already a word, leave it alone
+      return word;
+    }
+
+    if (trimPunctuation(word).indexOf(`'`) >= 1) {
+      // don't mess with words with apostrophes - watch out for "what'll" -> "what'little"
+      return word;
+    }
+
+    return replaceAllShortForms(word);
+  }
   function convertLine(inputLine) {
 
     const lowerProcessedLine = applyLowers(inputLine);
 
     let words = breakBySpaces(lowerProcessedLine);
+
+    words = words.map(addShortFormWholeWords);
 
     words = words.map(handleContractions);
   
@@ -320,7 +391,7 @@ function getAsciiVersion(
 
     words = words.map(applyModifiers);
 
-    words = words.map(addShortForms);
+    words = words.map(addShortFormPartWords);
 
     // TODO: handle numbers
     // TODO: Final Groupsign
