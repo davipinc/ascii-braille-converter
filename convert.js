@@ -22,10 +22,13 @@ async function loadFile(fileName = '') {
   return data.toString();
 }
 
-const START_QUOTE = '"';
+// TODO: const italicsRegExp = /^(.,)(.*)(,)$/;
+// TODO: “” means ?” because “ can be ? and both quotes together makes no sense
+
+const START_QUOTE = '“';
 const UPPERCASE_MODIFIER = ',';
 
-const punct = `[,.-?'"”]`;  
+const punct = `[,\\.\\-?'"“”]`;  
 const leadingPunctuationRegExp = new RegExp(`^${punct}+`);
 const trailingPunctuationRegExp = new RegExp(`${punct}+$`);
 
@@ -98,6 +101,7 @@ async function getAlphabeticContractions() {
     return Boolean(string);
   }
 
+  // TODO: break words with punctuation into two e.g. x'll
   contractionsArray.forEach( row => {
     const isBlankLine = row.replace(/\s/g, '') === '';
     if (isBlankLine) {
@@ -152,7 +156,12 @@ async function getLowerContractions() {
 }
 
 function trimPunctuation(word) {
-  return word.replace(leadingPunctuationRegExp, '').replace(trailingPunctuationRegExp, '');
+  const out = word.replace(leadingPunctuationRegExp, '').replace(trailingPunctuationRegExp, '');
+  return out;
+}
+
+function removeHyphens(word) {
+  return word.replace(/^-/, '').replace(/-$/, '');
 }
 
 function wordExists(word) {
@@ -249,155 +258,232 @@ function getAsciiVersion(
 
     return noLeadingHyphenSuffix;
   }
-
-  function handleContractions(word = '') {
-    return word.replace(/(["^;_])([a-z!])/ig, (match, dotType, suffixCharacter) => {
-      return getSuffixLetters(dotType, suffixCharacter);
-    });
-  }
-
-  function handlePrefixes(word = '') {
-    return word.replace(/\b(.+?)([;])(.+?)\b/g, (match, prefix, suffixCharacter, suffix) => {
-      return `${prefix}${getSuffixLetters(suffixCharacter, suffix)}`;
-    });
-  }
-
-  function addSingleLetterContractions(word = '') {
-    const isWhitespaceOnly = word.match(/^\s+$/);
-    const isLongerThanOneLetter = word.length>1;
-    if (isWhitespaceOnly || isLongerThanOneLetter) return word;
-    const contraction = word.toLowerCase();
-    if (alphaContractions.alone[contraction]) return alphaContractions.alone[contraction];
-    if (lowerContractions.alone[contraction]) return lowerContractions.alone[contraction];
-    return word;
-  }
-
-  function applyModifiers(word = '') {
-    if (word.substring(0,2) === `${START_QUOTE}${UPPERCASE_MODIFIER}`) {
-      // TODO: handle 2-3 uppercase modifiers
-      return `${START_QUOTE}${word.charAt(2).toUpperCase()}${word.substring(3)}`;
-    }  
-
-    if (word.charAt(0) === UPPERCASE_MODIFIER) {
-      return `${word.charAt(1).toUpperCase()}${word.substring(2)}`;
-    }  
-    return word;
-  }
-
-  function handleQuotes(word) {
-    if (word.charAt(0) === '"' && word.charAt(1) === ',') {
-      return `"${word.charAt(2).toUpperCase()}${word.substring(3)}`;
-    }
-    return word;
-  }
-
-  function trimHyphens(string = '') {
-    if (string.length === 1) {
-      return string;
-    }
-    return string.replace(/^-/, '').replace(/-$/, '');   
-  }
-
-  function applyLowers(line = '') {
-    line = line.replace(/\b",(.)(.+)\b/g, (match, firstLetter, otherLetters) => {
-      return `${firstLetter.toUpperCase()}${otherLetters}`;
-    });
-
-    Object.keys(lowerContractions.middle).forEach( ascii => {
-      const replacement = trimHyphens(lowerContractions.middle[ascii]);
-      line = line.replace(new RegExp("\\b([a-z]+)([" + ascii + "])([a-z]+)\\b","gi"), (match, start, middle, end) => {
-        const translated = `${start}${replacement}${end}`;
-        return translated;
-      });
-    });
-        
-    Object.keys(lowerContractions.end).forEach( ascii => {
-      const replacement = trimHyphens(lowerContractions.end[ascii]);
-      line = line.replace(new RegExp("\\b([a-z]+)(" + ascii + ")\\b","gi"), (match, start) => {
-        const translated = `${start}${replacement}`;
-        return translated;
-      });
-    });
-    return line;    
-  }
-
-  function addShortFormWholeWords(word) {
-    if (shortForms[word]) {
-      // console.log('SFWW', word, shortForms[word]);
-      return shortForms[word];
-    }
-    return word;
-  }
-
-  const psvShortForms = Object.keys(shortForms).join('|');
-  const shortFormRegExp = new RegExp(`(?:${punct}+)?(${psvShortForms})(?:${punct}+)?`, 'ig');
-
-  function replaceAllShortForms(word) {
+  function convertLine(inputLine, lineIndex) {
+    const log = (...args) => {
+      console.log(`L:${lineIndex+1}`, ...args);
+    };
     // eslint-disable-next-line no-unused-vars
-    const shortFormised = word.replace(shortFormRegExp, (_match = '', part, index) => {
-      const shortFormWordPart = shortForms[part.toLowerCase()];
-      const nextChar = word.charAt(index + part.length);
-      const noVowelsAfterThis = ['after', 'blind', 'friend'].indexOf(shortFormWordPart) >=0;
-      if (noVowelsAfterThis && nextChar.match(/[aeiouy]/i)) {
-        // super-specific vowel rule (see http://www.brl.org/intro/session09/short.html)
-        return part;
+    const debug = (...args) => {
+      if (!options.debug) return;
+      console.debug(`L:${lineIndex+1}`, ...args);
+    };
+    const trace = (...args) => {
+      if (!options.trace) return;
+      console.trace(`L:${lineIndex+1}`, ...args);
+    };
+
+    function handleContractions(word = '') {
+      return word.replace(/(["^;_])([a-z!])/ig, (match, dotType, suffixCharacter) => {
+        return getSuffixLetters(dotType, suffixCharacter);
+      });
+    }
+  
+    function handlePrefixes(word = '') {
+      return word.replace(/\b(.+?)([;])(.+?)\b/g, (match, prefix, suffixCharacter, suffix) => {
+        return `${prefix}${getSuffixLetters(suffixCharacter, suffix)}`;
+      });
+    }
+  
+    function addSingleLetterContractions(word = '') {
+      const isWhitespaceOnly = word.match(/^\s+$/);
+      const isLongerThanOneLetter = trimPunctuation(word).length > 1;
+      if (isWhitespaceOnly || isLongerThanOneLetter) return word;
+      const contraction = trimPunctuation(word).toLowerCase();
+      trace('contraction', word, contraction);
+
+      if (alphaContractions.alone[contraction]) {
+        Object.keys(alphaContractions.alone)
+          .forEach(letter => {
+            const contractionRegExp = new RegExp(`\\b[${letter}]\\b`, 'i');
+            word = word.replace(contractionRegExp, `${alphaContractions.alone[letter]}`);
+          }
+        );
       }
-      return shortFormWordPart;
-    });
+
+      if (lowerContractions.alone[contraction]) {
+        Object.keys(lowerContractions.alone)
+          .forEach(letter => {
+            const contractionRegExp = new RegExp(`\\b[${letter}]\\b`, 'i');
+            word = word.replace(contractionRegExp, `${lowerContractions.alone[letter]}`);
+          }
+        );
+      }
+        
+      //if (alphaContractions.alone[contraction]) return alphaContractions.alone[contraction];
+      // if (lowerContractions.alone[contraction]) return lowerContractions.alone[contraction];
+      return word;
+    }
+  
+    const NOT_A_CONTRACTION = '-';
+  
+    function addMidWordLowerContractions(word = '') {
+      const wordNoPunct = trimPunctuation(word);
+
+      const starters = lowerContractions.start;
+
+      Object.keys(starters)
+        .filter(letter => starters[letter] !== NOT_A_CONTRACTION)
+        .forEach(letter => {
+          const startRegExp = new RegExp(`^(?:[${letter}])`, 'i');
+          if (wordNoPunct.match(startRegExp)){
+            trace('wordA', word, starters[letter]);
+            word = word.replace(startRegExp, `$1${removeHyphens(starters[letter])}$2`);
+            trace('wordB', word);
+          }
+        }
+      );
+
+      const middles = lowerContractions.middle;
+      Object.keys(middles)
+        .filter(letter => middles[letter] !== NOT_A_CONTRACTION)
+        .forEach(letter => {
+          const middleRegExp = new RegExp(`(\\S)(?:[${letter}])(\\S)`, 'i');
+          if (wordNoPunct.match(middleRegExp)){
+            trace('wordA', word, middles[letter]);
+            word = word.replace(middleRegExp, `$1${removeHyphens(middles[letter])}$2`);
+            trace('wordB', word);
+          }
+        }
+      );
+
+      const endings = lowerContractions.end;
+      Object.keys(endings)
+        .filter(letter => endings[letter] !== NOT_A_CONTRACTION)
+        .forEach(letter => {
+          const endingRegExp = new RegExp(`(?:[${letter}])$`, 'i');
+          if (wordNoPunct.match(endingRegExp)){
+            trace('wordA', word, endings[letter]);
+            word = word.replace(endingRegExp, `$1${removeHyphens(endings[letter])}$2`);
+            trace('wordB', word);
+          }
+        }
+      );
+           
+      return word;
+    }
+  
+    function applyModifiers(word = '') {
+      if (word.substring(0,2) === `${START_QUOTE}${UPPERCASE_MODIFIER}`) {
+        // TODO: handle 2-3 uppercase modifiers
+        return `${START_QUOTE}${word.charAt(2).toUpperCase()}${word.substring(3)}`;
+      }  
+  
+      if (word.charAt(0) === UPPERCASE_MODIFIER) {
+        return `${word.charAt(1).toUpperCase()}${word.substring(2)}`;
+      }  
+      return word;
+    }
+  
+    function handleQuotes(word) {
+      if (word.charAt(0) === '"' && word.charAt(1) === ',') {
+        return `"${word.charAt(2).toUpperCase()}${word.substring(3)}`;
+      }
+      return word;
+    }
+  
+    function addShortFormWholeWords(word) {
+      if (shortForms[word]) {
+        trace('SFWW', word, shortForms[word]);
+        return shortForms[word];
+      }
+      return word;
+    }
+  
+    const psvShortForms = Object.keys(shortForms).join('|');
+    const shortFormRegExp = new RegExp(`(?:${punct}+)?(${psvShortForms})(?:${punct}+)?`, 'ig');
+  
+    function replaceAllShortForms(word) {
+      // eslint-disable-next-line no-unused-vars
+      const shortFormised = word.replace(shortFormRegExp, (_match = '', part, index) => {
+        const shortFormWordPart = shortForms[part.toLowerCase()];
+        const nextChar = word.charAt(index + part.length);
+        const noVowelsAfterThis = ['after', 'blind', 'friend'].indexOf(shortFormWordPart) >=0;
+        if (noVowelsAfterThis && nextChar.match(/[aeiouy]/i)) {
+          // super-specific vowel rule (see http://www.brl.org/intro/session09/short.html)
+          return part;
+        }
+        return shortFormWordPart;
+      });
+      
+      if (wordExists(shortFormised)) {
+        return shortFormised;
+      }
+      // report(`NOT RISKING THIS: ${shortFormised}`);
+      return word;    
+    }
+  
+  
+    function addShortFormPartWords(word) {
+      if (!shortFormRegExp.exec(word)) {
+        // no short forms here
+        return word;
+      }
+  
+      if (wordExists(word)) {
+        // this is already a word, leave it alone
+        return word;
+      }
+  
+      if (trimPunctuation(word).indexOf(`'`) >= 1) {
+        // don't mess with words with apostrophes - watch out for "what'll" -> "what'little"
+        return word;
+      }
+  
+      return replaceAllShortForms(word);
+    }
     
-    if (wordExists(shortFormised)) {
-      return shortFormised;
+    const passes = [];
+    function progress(wordsSnapshot) {
+      const isFirstPass = !passes.length;
+      const pass = passes.length+1;
+      const wordsJoined = wordsSnapshot.join(' ');
+      const anyChanges = isFirstPass || passes[passes.length-1] !== wordsJoined;
+      if (options.logProgress) {
+        if (isFirstPass) {
+          log(`-----------------------------------------------`);
+        } 
+
+        if (anyChanges) {
+          log(`PASS`, pass, wordsJoined);
+        }
+      }
+      passes.push(wordsJoined);
     }
-    // report(`NOT RISKING THIS: ${shortFormised}`);
-    return word;    
-  }
+    // const lowerProcessedLine = applyLowers(inputLine);
 
-
-  function addShortFormPartWords(word) {
-    if (!shortFormRegExp.exec(word)) {
-      // no short forms here
-      return word;
-    }
-
-    if (wordExists(word)) {
-      // this is already a word, leave it alone
-      return word;
-    }
-
-    if (trimPunctuation(word).indexOf(`'`) >= 1) {
-      // don't mess with words with apostrophes - watch out for "what'll" -> "what'little"
-      return word;
-    }
-
-    return replaceAllShortForms(word);
-  }
-  function convertLine(inputLine) {
-
-    const lowerProcessedLine = applyLowers(inputLine);
-
-    let words = breakBySpaces(lowerProcessedLine);
+    let words = breakBySpaces(inputLine);
+    progress(words);
 
     words = words.map(addShortFormWholeWords);
+    progress(words);
 
     words = words.map(handleContractions);
-  
-    words = words.map(handlePrefixes);
-      
-    words = words.map(handleQuotes);
+    progress(words);
 
-    words = words.map(addSingleLetterContractions);
+    words = words.map(handlePrefixes);
+    progress(words);
+
+    words = words.map(handleQuotes);
+    progress(words);
 
     words = words.map(translateLetters);
-
-    words = words.map(applyModifiers);
+    progress(words);
 
     words = words.map(addShortFormPartWords);
+    progress(words);
+
+    words = words.map(addSingleLetterContractions);
+    progress(words);
+
+    words = words.map(addMidWordLowerContractions);
+    progress(words);
+
+    words = words.map(applyModifiers);
+    progress(words);
 
     // TODO: handle numbers
     // TODO: Final Groupsign
     // TODO: Strong Groupsigns/Wordsigns
-    
-    // console.log(words);
 
     let line = words.join(' ');
     
@@ -406,12 +492,14 @@ function getAsciiVersion(
 
   console.info(`${lines.length} lines processed`);
 
-  const translatedLines = lines.map(convertLine).join('\n');
+  const translatedLines = lines.slice(options.startLine-1,options.endLine).map(convertLine).join('\n');
   return translatedLines;
 }
 
-async function convert(fileName = '') {
+async function convert(fileName = '', lines = '') {
   console.info(`File: ${fileName}`);
+  console.info(`Lines: ${lines}`);
+
   const mappings = await getMappings();
   const alphaContractions = await getAlphabeticContractions();
   const lowerContractions = await getLowerContractions();
@@ -419,7 +507,12 @@ async function convert(fileName = '') {
   const fileContents = await loadFile(fileName);
   const isFormalBRF = fileName.toLowerCase().indexOf('.brf') >= 0;
   const options = {
-    forceLowercaseOnInput: isFormalBRF
+    forceLowercaseOnInput: isFormalBRF,
+    startLine: lines ? parseInt((lines.split('-')[0]), 10) || 0 : undefined,
+    endLine: lines ? parseInt((lines.split('-')[1]), 10) || Infinity : undefined,
+    debug: false,
+    trace: false,
+    logProgress: true
   };
 
   const asciiVersion = getAsciiVersion(
@@ -439,7 +532,8 @@ async function convert(fileName = '') {
 }
 
 const inputFile = process.argv[2];
-convert(inputFile);
+const lines = process.argv[3];
+convert(inputFile, lines);
 
 module.exports = {
   convert
