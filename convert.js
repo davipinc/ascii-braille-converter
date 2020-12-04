@@ -6,9 +6,14 @@ const getAsciiVersion = require('./getAsciiVersion');
 const { getMappings, getLowerContractions, getAlphabeticContractions, getShortForms } = require('./loaders');
 
 
-async function convert(fileName = '', lines = '') {
+async function convert(fileName = '', lines = '', logLevel = '') {
   console.info(`File: ${fileName}`);
   console.info(`Lines: ${lines}`);
+
+  const logAll = logLevel === 'all';
+  const debug = logAll || logLevel === 'debug';
+  const trace = logAll || logLevel === 'trace';
+  const logProgress = logAll || logLevel === 'progress';
 
   const mappings = await getMappings();
   const alphaContractions = await getAlphabeticContractions();
@@ -20,9 +25,9 @@ async function convert(fileName = '', lines = '') {
     forceLowercaseOnInput: isFormalBRF,
     startLine: lines ? parseInt((lines.split('-')[0]), 10) || 0 : undefined,
     endLine: lines ? parseInt((lines.split('-')[1]), 10) || Infinity : undefined,
-    debug: false,
-    trace: false,
-    logProgress: false
+    debug,
+    trace,
+    logProgress
   };
 
   const asciiVersion = getAsciiVersion(
@@ -44,7 +49,8 @@ async function convert(fileName = '', lines = '') {
 
 const inputFile = process.argv[2];
 const lines = process.argv[3];
-convert(inputFile, lines);
+const logLevel = process.argv[4];
+convert(inputFile, lines, logLevel);
 
 module.exports = {
   convert
