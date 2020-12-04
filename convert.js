@@ -159,11 +159,6 @@ function trimPunctuation(word) {
   const out = word.replace(leadingPunctuationRegExp, '').replace(trailingPunctuationRegExp, '');
   return out;
 }
-
-function removeHyphens(word) {
-  return word.replace(/^-/, '').replace(/-$/, '');
-}
-
 function wordExists(word) {
   return dictionary[trimPunctuation(word.toLowerCase())];
 } 
@@ -289,7 +284,7 @@ function getAsciiVersion(
       const isLongerThanOneLetter = trimPunctuation(word).length > 1;
       if (isWhitespaceOnly || isLongerThanOneLetter) return word;
       const contraction = trimPunctuation(word).toLowerCase();
-      trace('contraction', word, contraction);
+      debug('contraction', word, contraction);
 
       if (alphaContractions.alone[contraction]) {
         Object.keys(alphaContractions.alone)
@@ -314,54 +309,6 @@ function getAsciiVersion(
       return word;
     }
   
-    const NOT_A_CONTRACTION = '-';
-  
-    function addMidWordLowerContractions(word = '') {
-      const wordNoPunct = trimPunctuation(word);
-
-      const starters = lowerContractions.start;
-
-      Object.keys(starters)
-        .filter(letter => starters[letter] !== NOT_A_CONTRACTION)
-        .forEach(letter => {
-          const startRegExp = new RegExp(`^(?:[${letter}])`, 'i');
-          if (wordNoPunct.match(startRegExp)){
-            trace('wordA', word, starters[letter]);
-            word = word.replace(startRegExp, `$1${removeHyphens(starters[letter])}$2`);
-            trace('wordB', word);
-          }
-        }
-      );
-
-      const middles = lowerContractions.middle;
-      Object.keys(middles)
-        .filter(letter => middles[letter] !== NOT_A_CONTRACTION)
-        .forEach(letter => {
-          const middleRegExp = new RegExp(`(\\S)(?:[${letter}])(\\S)`, 'i');
-          if (wordNoPunct.match(middleRegExp)){
-            trace('wordA', word, middles[letter]);
-            word = word.replace(middleRegExp, `$1${removeHyphens(middles[letter])}$2`);
-            trace('wordB', word);
-          }
-        }
-      );
-
-      const endings = lowerContractions.end;
-      Object.keys(endings)
-        .filter(letter => endings[letter] !== NOT_A_CONTRACTION)
-        .forEach(letter => {
-          const endingRegExp = new RegExp(`(?:[${letter}])$`, 'i');
-          if (wordNoPunct.match(endingRegExp)){
-            trace('wordA', word, endings[letter]);
-            word = word.replace(endingRegExp, `$1${removeHyphens(endings[letter])}$2`);
-            trace('wordB', word);
-          }
-        }
-      );
-           
-      return word;
-    }
-  
     function applyModifiers(word = '') {
       if (word.substring(0,2) === `${START_QUOTE}${UPPERCASE_MODIFIER}`) {
         // TODO: handle 2-3 uppercase modifiers
@@ -379,6 +326,35 @@ function getAsciiVersion(
         return `"${word.charAt(2).toUpperCase()}${word.substring(3)}`;
       }
       return word;
+    }
+    function trimHyphens(string = '') {
+      if (string.length === 1) {
+        return string;
+      }
+      return string.replace(/^-/, '').replace(/-$/, '');   
+    }
+  
+    function applyLowers(line = '') {
+      line = line.replace(/\b",(.)(.+)\b/g, (match, firstLetter, otherLetters) => {
+        return `${firstLetter.toUpperCase()}${otherLetters}`;
+      });
+  
+      Object.keys(lowerContractions.middle).forEach( ascii => {
+        const replacement = trimHyphens(lowerContractions.middle[ascii]);
+        line = line.replace(new RegExp("\\b([a-z]+)([" + ascii + "])([a-z]+)\\b","gi"), (match, start, middle, end) => {
+          const translated = `${start}${replacement}${end}`;
+          return translated;
+        });
+      });
+          
+      Object.keys(lowerContractions.end).forEach( ascii => {
+        const replacement = trimHyphens(lowerContractions.end[ascii]);
+        line = line.replace(new RegExp("\\b([a-z]+)(" + ascii + ")\\b","gi"), (match, start) => {
+          const translated = `${start}${replacement}`;
+          return translated;
+        });
+      });
+      return line;    
     }
   
     function addShortFormWholeWords(word) {
@@ -449,9 +425,12 @@ function getAsciiVersion(
       }
       passes.push(wordsJoined);
     }
-    // const lowerProcessedLine = applyLowers(inputLine);
+    
+    // This is needed but screws up y! (you!) done“ (doneth), me: to mewh
+    // and leave Sca;ers as Scas (spellcheck....)
+    const lowerProcessedLine = applyLowers(inputLine);
 
-    let words = breakBySpaces(inputLine);
+    let words = breakBySpaces(lowerProcessedLine);
     progress(words);
 
     words = words.map(addShortFormWholeWords);
@@ -466,19 +445,18 @@ function getAsciiVersion(
     words = words.map(handleQuotes);
     progress(words);
 
-    words = words.map(translateLetters);
-    progress(words);
-
+    words = words.map(addSingleLetterContractions);
     words = words.map(addShortFormPartWords);
     progress(words);
 
-    words = words.map(addSingleLetterContractions);
+    words = words.map(translateLetters); // DO NOT place this before addSingleLetterContractions
     progress(words);
 
-    words = words.map(addMidWordLowerContractions);
-    progress(words);
+    // only effect on Chamber of Secrets is Mu7le to Muggle - really should go before translateLetters I think but breaks things
+    // words = words.map(addMidWordLowerContractions);
+    // progress(words);
 
-    words = words.map(applyModifiers);
+    words = words.map(applyModifiers); // MUST go last
     progress(words);
 
     // TODO: handle numbers
@@ -512,7 +490,7 @@ async function convert(fileName = '', lines = '') {
     endLine: lines ? parseInt((lines.split('-')[1]), 10) || Infinity : undefined,
     debug: false,
     trace: false,
-    logProgress: true
+    logProgress: false
   };
 
   const asciiVersion = getAsciiVersion(
