@@ -233,6 +233,10 @@ function convertLine(inputLine, lineIndex) {
     return replaceAllShortForms(word);
   }
   
+  function handleQuestionMarks(word) {
+    return word.replace(/“”/g, '?”');
+  }
+
   const passes = [];
   function progress(wordsSnapshot) {
     const isFirstPass = !passes.length;
@@ -280,6 +284,9 @@ function convertLine(inputLine, lineIndex) {
   // only effect on Chamber of Secrets is Mu7le to Muggle - really should go before translateLetters I think but breaks things
   // words = words.map(addMidWordLowerContractions);
   // progress(words);
+
+  words = words.map(handleQuestionMarks);
+  progress(words);
 
   words = words.map(applyModifiers); // MUST go last
   progress(words);
