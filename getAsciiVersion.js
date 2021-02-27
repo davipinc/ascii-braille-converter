@@ -5,13 +5,32 @@ const dictionary = require('./dictionary/words_dictionary.json');
 const START_QUOTE = '“';
 const UPPERCASE_MODIFIER = ',';
 
-const punct = `[,\\.\\-?'"“”]`;  
-const leadingPunctuationRegExp = new RegExp(`^${punct}+`);
-const trailingPunctuationRegExp = new RegExp(`${punct}+$`);
+const punct = `,\\.\\-?'"“”`; // not that 8 means different things leading or trailing
+const leadingPunct = `${punct}`; // adds punctuation only seen leading
+const trailingPunct = `${punct}`; // adds punctuation only seen trailing
+const leadingQuote = '8'; 
+const trailingQMark = '8'; 
+const leadingPunctuationRegExp = new RegExp(`^[${leadingPunct}]+`);
+const trailingPunctuationRegExp = new RegExp(`[${trailingPunct}]+$`);
+const leadingQuoteRegExp = new RegExp(`^[${leadingQuote}]`);
+const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
+
+
+function trimQuoteAndQMark(word) {
+  if (word !== leadingQuote) {
+    word = word.replace(leadingQuoteRegExp, '');
+  }
+
+  if (word !== trailingQMark) {
+    word = word.replace(trailingQMarkRegExp, '');
+  }
+  return word;
+}
 
 function trimPunctuation(word) {
-  const out = word.replace(leadingPunctuationRegExp, '').replace(trailingPunctuationRegExp, '');
-  return out;
+  word = trimQuoteAndQMark(word);
+  word = word.replace(leadingPunctuationRegExp, '').replace(trailingPunctuationRegExp, '');
+  return word;
 }
 
 function breakBySpaces(line = '') {
@@ -107,9 +126,11 @@ function convertLine(inputLine, lineIndex) {
   function addSingleLetterContractions(word = '') {
     const isWhitespaceOnly = word.match(/^\s+$/);
     const isLongerThanOneLetter = trimPunctuation(word).length > 1;
-    if (isWhitespaceOnly || isLongerThanOneLetter) return word;
+    if (isWhitespaceOnly || isLongerThanOneLetter) {
+      return word;
+    }
     const contraction = trimPunctuation(word).toLowerCase();
-    debug('contraction', word, contraction);
+    console.log('contraction', word, contraction);
 
     if (alphaContractions.alone[contraction]) {
       Object.keys(alphaContractions.alone)
@@ -191,7 +212,7 @@ function convertLine(inputLine, lineIndex) {
   }
 
   const psvShortForms = Object.keys(shortForms).join('|');
-  const shortFormRegExp = new RegExp(`(?:${punct}+)?(${psvShortForms})(?:${punct}+)?`, 'ig');
+  const shortFormRegExp = new RegExp(`(?:[${leadingPunct}]+)?(${psvShortForms})(?:[${trailingPunct}]+)?`, 'ig');
 
   function replaceAllShortForms(word) {
     // eslint-disable-next-line no-unused-vars
