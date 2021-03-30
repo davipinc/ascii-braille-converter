@@ -165,12 +165,33 @@ function convertLine(inputLine, lineIndex) {
     return word;
   }
 
+  function addWordSigns(word) {
+    const wordsigns = {
+      ch: 'child',
+      sh: 'shall',
+      th: 'this',
+      wh: 'which',
+      ou: 'out',
+      st: 'st'
+    };
+
+    Object.keys(wordsigns).forEach(sign => {
+      // the \\. is to prevent matching ch.e as child.e when it is chance
+      word = word.replace(new RegExp("(?!\\.)\\b(" + sign + ")\\b(?!\\.)","gi"), (match, sign) => {
+        return wordsigns[sign];
+      });
+    });
+
+    return word;
+  }
+
   function handleQuotes(word) {
     if (word.charAt(0) === '"' && word.charAt(1) === ',') {
       return `"${word.charAt(2).toUpperCase()}${word.substring(3)}`;
     }
     return word;
   }
+  
   function trimHyphens(string = '') {
     if (string.length === 1) {
       return string;
@@ -307,12 +328,11 @@ function convertLine(inputLine, lineIndex) {
   words = words.map(handleQuestionMarks);
   progress(words);
 
+  words = words.map(addWordSigns);
+  progress(words);
+  
   words = words.map(applyModifiers); // MUST go last
   progress(words);
-
-  // TODO: handle numbers
-  // TODO: Final Groupsign
-  // TODO: Strong Groupsigns/Wordsigns
 
   let line = words.join(' ');
   
