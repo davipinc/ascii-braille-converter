@@ -126,11 +126,9 @@ function convertLine(inputLine, lineIndex) {
   function addSingleLetterContractions(word = '') {
     const isWhitespaceOnly = word.match(/^\s+$/);
     const isLongerThanOneLetter = trimPunctuation(word).length > 1;
-    if (isWhitespaceOnly || isLongerThanOneLetter) {
-      return word;
-    }
+    if (isWhitespaceOnly || isLongerThanOneLetter) return word;
     const contraction = trimPunctuation(word).toLowerCase();
-    console.log('contraction', word, contraction);
+    debug('contraction', word, contraction);
 
     if (alphaContractions.alone[contraction]) {
       Object.keys(alphaContractions.alone)
