@@ -15,7 +15,6 @@ const trailingPunctuationRegExp = new RegExp(`[${trailingPunct}]+$`);
 const leadingQuoteRegExp = new RegExp(`^[${leadingQuote}]`);
 const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 
-
 function trimQuoteAndQMark(word) {
   if (word !== leadingQuote) {
     word = word.replace(leadingQuoteRegExp, '');
@@ -199,27 +198,38 @@ function convertLine(inputLine, lineIndex) {
     return string.replace(/^-/, '').replace(/-$/, '');   
   }
 
-  function applyLowers(line = '') {
+  function applyCase(line = '') {
     line = line.replace(/\b",(.)(.+)\b/g, (match, firstLetter, otherLetters) => {
       return `${firstLetter.toUpperCase()}${otherLetters}`;
     });
 
+    return line;
+  }
+
+  function applyLowers(word = '') {
+    const brailleChars = 'a-z\\?\\+\\/';
+    const leadingPuncGroup = '(?:[8,“]*)';
+
     Object.keys(lowerContractions.middle).forEach( ascii => {
       const replacement = trimHyphens(lowerContractions.middle[ascii]);
-      line = line.replace(new RegExp("\\b([a-z]+)([" + ascii + "])([a-z]+)\\b","gi"), (match, start, middle, end) => {
+      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+)([${ascii}])([${brailleChars}]+)$`,"gi");
+
+      // console.log('reg', reg);
+      word = word.replace(reg, (match, start, middle, end) => {
         const translated = `${start}${replacement}${end}`;
+        // console.log('translated', match, translated);
         return translated;
       });
     });
         
     Object.keys(lowerContractions.end).forEach( ascii => {
       const replacement = trimHyphens(lowerContractions.end[ascii]);
-      line = line.replace(new RegExp("\\b([a-z]+)(" + ascii + ")\\b","gi"), (match, start) => {
+      word = word.replace(new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+)(${ascii})$`,"gi"), (match, start) => {
         const translated = `${start}${replacement}`;
         return translated;
       });
     });
-    return line;    
+    return word;    
   }
 
   function addShortFormWholeWords(word) {
@@ -294,12 +304,19 @@ function convertLine(inputLine, lineIndex) {
     }
     passes.push(wordsJoined);
   }
-  
+
+
+  // initial state
+  progress(breakBySpaces(inputLine));
+
   // This is needed but screws up y! (you!) done“ (doneth), me: to mewh
   // and leave Sca;ers as Scas (spellcheck....)
-  const lowerProcessedLine = applyLowers(inputLine);
+  const lowerProcessedLine = applyCase(inputLine);
 
   let words = breakBySpaces(lowerProcessedLine);
+  progress(words);
+
+  words = words.map(applyLowers);
   progress(words);
 
   words = words.map(addShortFormWholeWords);
@@ -315,6 +332,8 @@ function convertLine(inputLine, lineIndex) {
   progress(words);
 
   words = words.map(addSingleLetterContractions);
+  progress(words);
+
   words = words.map(addShortFormPartWords);
   progress(words);
 
