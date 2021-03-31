@@ -6,7 +6,6 @@ Usage
 
 # TODO
 
-- lower contraction middle
 - alphabetic contractions with dots 56 etc e.g. s.d = sound
 - short forms with brackets showing 2 words e.g. mst / m(st)
 - handle numbers

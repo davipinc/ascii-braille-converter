@@ -214,10 +214,10 @@ function convertLine(inputLine, lineIndex) {
       const replacement = trimHyphens(lowerContractions.middle[ascii]);
       const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+)([${ascii}])([${brailleChars}]+)$`,"gi");
 
-      // console.log('reg', reg);
+      // console.log('reg', word, reg);
       word = word.replace(reg, (match, start, middle, end) => {
         const translated = `${start}${replacement}${end}`;
-        // console.log('translated', match, translated);
+        // console.log('translated', word, match, translated);
         return translated;
       });
     });
@@ -238,6 +238,10 @@ function convertLine(inputLine, lineIndex) {
       return shortForms[word];
     }
     return word;
+  }
+
+  function addDashes(word = '') {
+    return word.replace(/,-/, ', - ');
   }
 
   const psvShortForms = Object.keys(shortForms).join('|');
@@ -308,7 +312,7 @@ function convertLine(inputLine, lineIndex) {
 
   // initial state
   progress(breakBySpaces(inputLine));
-
+  
   // This is needed but screws up y! (you!) done“ (doneth), me: to mewh
   // and leave Sca;ers as Scas (spellcheck....)
   const lowerProcessedLine = applyCase(inputLine);
@@ -349,7 +353,10 @@ function convertLine(inputLine, lineIndex) {
 
   words = words.map(addWordSigns);
   progress(words);
-  
+
+  words = words.map(addDashes);
+  progress(words);
+
   words = words.map(applyModifiers); // MUST go last
   progress(words);
 
