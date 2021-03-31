@@ -199,6 +199,7 @@ function convertLine(inputLine, lineIndex) {
   }
 
   function applyCase(line = '') {
+    // TODO: failing on `Right,-,i'm` because adjacent to ellipsis
     line = line.replace(/\b",(.)(.+)\b/g, (match, firstLetter, otherLetters) => {
       return `${firstLetter.toUpperCase()}${otherLetters}`;
     });
@@ -209,10 +210,11 @@ function convertLine(inputLine, lineIndex) {
   function applyLowers(word = '') {
     const brailleChars = 'a-z\\?\\+\\/';
     const leadingPuncGroup = '(?:[8,“]*)';
+    const trailingPuncGroup = '(?:[,”]*)';
 
     Object.keys(lowerContractions.middle).forEach( ascii => {
       const replacement = trimHyphens(lowerContractions.middle[ascii]);
-      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+)([${ascii}])([${brailleChars}]+)$`,"gi");
+      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+)([${ascii}])([${brailleChars}]+${trailingPuncGroup})$`,"gi");
 
       // console.log('reg', word, reg);
       word = word.replace(reg, (match, start, middle, end) => {
@@ -240,8 +242,8 @@ function convertLine(inputLine, lineIndex) {
     return word;
   }
 
-  function addDashes(word = '') {
-    return word.replace(/,-/, ', - ');
+  function addEllipses(line = '') {
+    return line.replace(/,-/g, '...');
   }
 
   const psvShortForms = Object.keys(shortForms).join('|');
@@ -315,7 +317,7 @@ function convertLine(inputLine, lineIndex) {
   
   // This is needed but screws up y! (you!) done“ (doneth), me: to mewh
   // and leave Sca;ers as Scas (spellcheck....)
-  const lowerProcessedLine = applyCase(inputLine);
+  const lowerProcessedLine = addEllipses(applyCase(inputLine));
 
   let words = breakBySpaces(lowerProcessedLine);
   progress(words);
@@ -352,9 +354,6 @@ function convertLine(inputLine, lineIndex) {
   progress(words);
 
   words = words.map(addWordSigns);
-  progress(words);
-
-  words = words.map(addDashes);
   progress(words);
 
   words = words.map(applyModifiers); // MUST go last
