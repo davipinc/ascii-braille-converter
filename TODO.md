@@ -10,6 +10,7 @@ Usage
 - `lessons "ghthough perh not Snape,`
 - `“I meant ^“pl,se^”!”`
 - `“,,i warned ythe i will not`
+- `sp,k` to `speak`, `tr,ted` to `treated`
 - short forms with brackets showing 2 words e.g. mst / m(st)
 - handle numbers
 - Final Groupsign

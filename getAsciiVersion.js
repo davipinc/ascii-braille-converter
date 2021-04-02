@@ -15,6 +15,10 @@ const trailingPunctuationRegExp = new RegExp(`[${trailingPunct}]+$`);
 const leadingQuoteRegExp = new RegExp(`^[${leadingQuote}]`);
 const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 
+const brailleChars = 'a-z\\?\\+\\/$';
+const leadingPuncGroup = '(?:[8,“]*)';
+const trailingPuncGroup = '(?:[,”]*)';
+
 function trimQuoteAndQMark(word) {
   if (word !== leadingQuote) {
     word = word.replace(leadingQuoteRegExp, '');
@@ -132,6 +136,7 @@ function convertLine(inputLine, lineIndex) {
     if (alphaContractions.alone[contraction]) {
       Object.keys(alphaContractions.alone)
         .forEach(letter => {
+
           const contractionRegExp = new RegExp(`\\b[${letter}]\\b`, 'i');
           word = word.replace(contractionRegExp, `${alphaContractions.alone[letter]}`);
         }
@@ -218,10 +223,6 @@ function convertLine(inputLine, lineIndex) {
 
 
   function applyLowers(word = '') {
-    const brailleChars = 'a-z\\?\\+\\/';
-    const leadingPuncGroup = '(?:[8,“]*)';
-    const trailingPuncGroup = '(?:[,”]*)';
-
     Object.keys(lowerContractions.start).forEach( char => {
       const replacement = trimHyphens(lowerContractions.start[char]);
       const reg = new RegExp(`^(${leadingPuncGroup})([${char}])([${brailleChars}]+${trailingPuncGroup})$`,"gi");
