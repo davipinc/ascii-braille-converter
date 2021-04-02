@@ -207,30 +207,39 @@ function convertLine(inputLine, lineIndex) {
     return line;
   }
 
+  function processContractions(word = '', regexp, replacement = '') {
+    // console.log('reg', word, reg);
+    return word.replace(regexp, (match, start, middle, end) => {
+      const translated = `${start}${replacement}${end}`;
+      // console.log('translated', word, match, translated);
+      return translated;
+    });      
+  }
+
+
   function applyLowers(word = '') {
     const brailleChars = 'a-z\\?\\+\\/';
     const leadingPuncGroup = '(?:[8,“]*)';
     const trailingPuncGroup = '(?:[,”]*)';
 
-    Object.keys(lowerContractions.middle).forEach( ascii => {
-      const replacement = trimHyphens(lowerContractions.middle[ascii]);
-      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+)([${ascii}])([${brailleChars}]+${trailingPuncGroup})$`,"gi");
+    Object.keys(lowerContractions.start).forEach( char => {
+      const replacement = trimHyphens(lowerContractions.start[char]);
+      const reg = new RegExp(`^(${leadingPuncGroup})([${char}])([${brailleChars}]+${trailingPuncGroup})$`,"gi");
+      word = processContractions(word, reg, replacement);
+    });
 
-      // console.log('reg', word, reg);
-      word = word.replace(reg, (match, start, middle, end) => {
-        const translated = `${start}${replacement}${end}`;
-        // console.log('translated', word, match, translated);
-        return translated;
-      });
+    Object.keys(lowerContractions.middle).forEach( char => {
+      const replacement = trimHyphens(lowerContractions.middle[char]);
+      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+)([${char}])([${brailleChars}]+${trailingPuncGroup})$`,"gi");
+      word = processContractions(word, reg, replacement);
     });
         
-    Object.keys(lowerContractions.end).forEach( ascii => {
-      const replacement = trimHyphens(lowerContractions.end[ascii]);
-      word = word.replace(new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+)(${ascii})$`,"gi"), (match, start) => {
-        const translated = `${start}${replacement}`;
-        return translated;
-      });
+    Object.keys(lowerContractions.end).forEach( char => {
+      const replacement = trimHyphens(lowerContractions.end[char]);
+      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+)([${char}])(${trailingPuncGroup})$`,"gi");
+      word = processContractions(word, reg, replacement);
     });
+
     return word;    
   }
 
@@ -294,7 +303,7 @@ function convertLine(inputLine, lineIndex) {
   }
 
   const passes = [];
-  function progress(operationName = '', wordsSnapshot = '') {
+  function progress(operationName = '', wordsSnapshot) {
     const isFirstPass = !passes.length;
     const pass = passes.length+1;
     const wordsJoined = wordsSnapshot.join(' ');

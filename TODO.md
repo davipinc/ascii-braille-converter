@@ -15,7 +15,4 @@ Usage
 - Final Groupsign
 
 - const italicsRegExp = /^(.,)(.*)(,)$/;
-
-- 184 - br,thing = breathing (lower contraction middle)
-- 
-- 
+ 
