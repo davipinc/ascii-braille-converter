@@ -21,10 +21,28 @@ async function convert(fileName = '', lines = '', logLevel = '') {
   const shortForms = await getShortForms();
   const fileContents = await loadFile(fileName);
   const isFormalBRF = fileName.toLowerCase().indexOf('.brf') >= 0;
+  
+  let startLine = 0;
+  let endLine = Infinity;
+  const startEndReg = /^([0-9]+)-([0-9]+)$/;
+  const singleLineReg = /^([0-9]+)$/;
+
+  if (lines.match(startEndReg)) {
+    startLine = parseInt(lines.replace(startEndReg, '$1'), 10);
+    endLine = parseInt(lines.replace(startEndReg, '$2'), 10);
+    console.info('Range mode:', startLine, endLine);
+  } else if (lines.match(singleLineReg)) {
+    startLine = parseInt(lines, 10);
+    endLine = startLine;
+    console.info('Single line mode', startLine);
+  } else {
+    console.info('Document mode', startLine);
+  }
+
   const options = {
     forceLowercaseOnInput: isFormalBRF,
-    startLine: lines ? parseInt((lines.split('-')[0]), 10) || 0 : undefined,
-    endLine: lines ? parseInt((lines.split('-')[1]), 10) || Infinity : undefined,
+    startLine,
+    endLine,
     debug,
     trace,
     logProgress
