@@ -55,14 +55,6 @@ function getAsciiVersion(
 ) {
 const lines = arrayOfLines(options.forceLowercaseOnInput ? string.toLowerCase() : string);
 
-function sanityChecks() {
-  if (options.startLine > lines.length) {
-    console.warn('Start line is after the end of the document. Expect no output.', options.startLine, '>', lines.length);
-  }
-}
-
-sanityChecks();
-
 function translateLetters(word) {
   const translated = word.replace(/./g, match => {
     if (mappings.chars[match]) {
@@ -409,8 +401,20 @@ function convertLine(inputLine, lineIndex) {
   return line;
 }
 
+function sanityChecks() {
+  if (options.startLine > lines.length) {
+    console.warn('Start line is after the end of the document. Expect no output.', options.startLine, '>', lines.length);
+  }
+}
 
-const translatedLines = lines.slice(options.startLine-1,options.endLine).map(convertLine).join('\n');
+sanityChecks();
+
+if (options.endLine === Infinity) {
+  options.endLine = lines.length;
+}
+
+const linesToProcess = lines.slice(options.startLine-1, options.endLine-1);
+const translatedLines = linesToProcess.map(convertLine).join('\n');
 console.info(`${translatedLines.length} lines processed`);
 return translatedLines;
 }

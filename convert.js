@@ -24,8 +24,8 @@ async function convert(fileName = '', lines = '', logLevel = '') {
   const isFormalBRF = fileName.toLowerCase().indexOf('.brf') >= 0;
   const baseName = fileName.replace(/\.brf$/i, '');
 
-  let startLine = 0;
-  let endLine = Infinity;
+  let startLine;
+  let endLine;
   let filePart = '';
   const startEndReg = /^([0-9]+)-([0-9]+)$/;
   const singleLineReg = /^([0-9]+)$/;
@@ -37,11 +37,14 @@ async function convert(fileName = '', lines = '', logLevel = '') {
     console.info('Range mode:', startLine, endLine);
   } else if (lines.match(singleLineReg)) {
     startLine = parseInt(lines, 10);
-    endLine = startLine;
+    endLine = startLine + 1;
     filePart = `__line`;
     console.info('Single line mode', startLine);
   } else {
-    console.info('Document mode', startLine);
+    startLine = 1;
+    endLine = Infinity;   
+    filePart = '';
+    console.info('Document mode');
   }
 
   const options = {
