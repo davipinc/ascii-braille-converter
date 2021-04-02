@@ -74,7 +74,7 @@ const dotTypes = {
   '^': 'dots_45',
   ';': 'dots_56',
   '_': 'dots_456',
-  '.': 'dots_'
+  '.': 'dots_46'
 };
 
 function getSuffixLetters(suffixCharacter = '', suffixLetter = '') {
@@ -100,7 +100,7 @@ function convertLine(inputLine, lineIndex) {
   const log = (...args) => {
     console.log(`L:${lineIndex+1}`, ...args);
   };
-  // eslint-disable-next-line no-unused-vars
+
   const debug = (...args) => {
     if (!options.debug) return;
     console.debug(`L:${lineIndex+1}`, ...args);
@@ -111,7 +111,7 @@ function convertLine(inputLine, lineIndex) {
   };
 
   function handleContractions(word = '') {
-    return word.replace(/(["^;_])([a-z!])/ig, (match, dotType, suffixCharacter) => {
+    return word.replace(/(["^;_.])([a-z!])/ig, (match, dotType, suffixCharacter) => {
       return getSuffixLetters(dotType, suffixCharacter);
     });
   }
@@ -317,7 +317,7 @@ function convertLine(inputLine, lineIndex) {
   
   // This is needed but screws up y! (you!) done“ (doneth), me: to mewh
   // and leave Sca;ers as Scas (spellcheck....)
-  const lowerProcessedLine = addEllipses(applyCase(inputLine));
+  const lowerProcessedLine = applyCase(inputLine);
 
   let words = breakBySpaces(lowerProcessedLine);
   progress(words);
@@ -359,7 +359,7 @@ function convertLine(inputLine, lineIndex) {
   words = words.map(applyModifiers); // MUST go last
   progress(words);
 
-  let line = words.join(' ');
+  let line = addEllipses(words.join(' '));
   
   return line;
 }
