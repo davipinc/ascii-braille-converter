@@ -3,7 +3,7 @@ const fs = require('fs').promises;
 
 const { loadFile, getReports } = require('./utils');
 const getAsciiVersion = require('./getAsciiVersion');
-const { getMappings, getLowerContractions, getAlphabeticContractions, getShortForms } = require('./loaders');
+const { getBrailleMappings, getBrailleOnlyContractions, getLowerContractions, getAlphabeticContractions, getShortForms } = require('./loaders');
 
 
 async function convert(fileName = '', lines = '', logLevel = '') {
@@ -15,14 +15,15 @@ async function convert(fileName = '', lines = '', logLevel = '') {
   const trace = logAll || logLevel === 'trace';
   const logProgress = logAll || logLevel === 'progress';
 
-  const mappings = await getMappings();
+  const mappings = await getBrailleMappings();
+  const brailleOnlyContractions = await getBrailleOnlyContractions();
   const alphaContractions = await getAlphabeticContractions();
   const lowerContractions = await getLowerContractions();
   const shortForms = await getShortForms();
   const fileContents = await loadFile(fileName);
   const isFormalBRF = fileName.toLowerCase().indexOf('.brf') >= 0;
   const baseName = fileName.replace(/\.brf$/i, '');
-  
+
   let startLine = 0;
   let endLine = Infinity;
   let filePart = '';
@@ -56,6 +57,7 @@ async function convert(fileName = '', lines = '', logLevel = '') {
     options, 
     fileContents,
     mappings,
+    brailleOnlyContractions,
     alphaContractions,
     lowerContractions,
     shortForms

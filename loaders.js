@@ -13,14 +13,19 @@ const {
 const {
   LOWER_ASCII, LOWER_ALONE, LOWER_START, LOWER_MIDDLE, LOWER_END
 } = require('./mapping/lower-contractions-columns.js');
+const {
+  BOC_ASCII_GLYPH, BOC_BRAILLE_MEANING
+} = require('./mapping/braille-only-contractions-columns.js');
 
 const brailleMapFile = `./mapping/braille-ascii.tsv`;
 const alphabeticContractionsFile = `./mapping/alphabetic-contractions.tsv`;
 const lowerContractionsFile = `./mapping/lower-contractions.tsv`;
 const shortFormsFile = `./mapping/shortforms.tsv`;
+const brailleOnlyContractionsFile = `./mapping/braille-only-contractions.tsv`;
 
 function getGlyphEffect(meaning) {
   if (typeof meaning !== 'string') {
+    console.error('Meaning', meaning);
     throw new Error('Glyph meaning must be a string');
   }
   if (meaning.charAt(0) === '(') {
@@ -33,10 +38,8 @@ function removeBrackets(string) {
   return string.replace(/[()]/g, '');
 }
 
-async function getMappings() {
-  const mappingTable = await fs.readFile(brailleMapFile, "utf8");
-  
-  const mappingsArray = arrayOfLines(mappingTable);
+async function getMappings(asciiBrailleKeyValueTable, keyIndex, valueIndex) {
+  const mappingsArray = arrayOfLines(asciiBrailleKeyValueTable);
   const mappings = {
     chars: {},
     funcs: {}
@@ -49,8 +52,8 @@ async function getMappings() {
     }
 
     const cols = row.split(/\t/);
-    const asciiGlyph = cols[ASCII_GLYPH];
-    const meaning = cols[BRAILLE_MEANING];
+    const asciiGlyph = cols[keyIndex];
+    const meaning = cols[valueIndex];
     const effect = getGlyphEffect(meaning);
     
     if (typeof effect === 'string') {
@@ -58,6 +61,16 @@ async function getMappings() {
     }
   });
   return mappings;
+}
+
+async function getBrailleMappings() {
+  const table = await fs.readFile(brailleMapFile, "utf8");
+  return getMappings(table, ASCII_GLYPH, BRAILLE_MEANING);
+}
+
+async function getBrailleOnlyContractions() {
+  const table = await fs.readFile(brailleOnlyContractionsFile, "utf8");
+  return getMappings(table, BOC_ASCII_GLYPH, BOC_BRAILLE_MEANING);
 }
 
 async function getAlphabeticContractions() {
@@ -164,8 +177,9 @@ async function getShortForms() {
 }
 
 module.exports = {
-  getMappings,
+  getBrailleMappings,
   getAlphabeticContractions,
+  getBrailleOnlyContractions,
   getLowerContractions,
   getShortForms
 };

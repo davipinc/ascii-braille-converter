@@ -16,8 +16,8 @@ const leadingQuoteRegExp = new RegExp(`^[${leadingQuote}]`);
 const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 
 const brailleChars = 'a-z\\?\\+\\/$';
-const leadingPuncGroup = '(?:[8,“]*)';
-const trailingPuncGroup = '(?:[,”]*)';
+const leadingPunc = '8,“';
+const trailingPunc = ',”';
 
 function trimQuoteAndQMark(word) {
   if (word !== leadingQuote) {
@@ -48,6 +48,7 @@ function getAsciiVersion(
   options = {}, 
   string = '',
   mappings = {},
+  brailleOnlyContractions = {},
   alphaContractions = {},
   lowerContractions = {},
   shortForms = {}
@@ -79,6 +80,27 @@ function translateLetters(word) {
   });
 
   return translated;
+}
+
+function onlyMultiLetter(contraction = '') {
+  return contraction.length > 1;
+}
+
+function regexpSafe(string = '') {
+  return string.replace(/([\\|^$?])/g, '\\$1');
+}
+
+function addBrailleOnlyContractions(word) {
+  const notWordEdge = `(?![ ${leadingPunc}]+)`;
+  Object.keys(brailleOnlyContractions.chars).filter(onlyMultiLetter).forEach(contraction => {
+    if (word.indexOf(contraction) >= 0) {
+      // console.log('contraction', contraction);
+      const reg = new RegExp(`${notWordEdge}${regexpSafe(contraction)}`, "ig");
+      const replacement = brailleOnlyContractions.chars[contraction];
+      word = word.replace(reg, `${replacement}`);
+    }
+  });
+  return word;
 }
 
 const dotTypes = {
@@ -231,6 +253,8 @@ function convertLine(inputLine, lineIndex) {
 
 
   function applyLowers(word = '') {
+    const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
+    const trailingPuncGroup = `(?:[${trailingPunc}]*)`;
     Object.keys(lowerContractions.start).forEach( char => {
       const replacement = trimHyphens(lowerContractions.start[char]);
       const reg = new RegExp(`^(${leadingPuncGroup})([${char}])([${brailleChars}]+${trailingPuncGroup})$`,"gi");
@@ -360,6 +384,9 @@ function convertLine(inputLine, lineIndex) {
 
   words = words.map(addShortFormPartWords);
   progress('addShortFormPartWords', words);
+
+  words = words.map(addBrailleOnlyContractions);
+  progress('addBrailleOnlyContractions', words);
 
   words = words.map(translateLetters); // DO NOT place this before addSingleLetterContractions
   progress('translateLetters', words);
