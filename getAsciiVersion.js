@@ -294,7 +294,7 @@ function convertLine(inputLine, lineIndex) {
   }
 
   const passes = [];
-  function progress(wordsSnapshot) {
+  function progress(operationName = '', wordsSnapshot = '') {
     const isFirstPass = !passes.length;
     const pass = passes.length+1;
     const wordsJoined = wordsSnapshot.join(' ');
@@ -305,7 +305,7 @@ function convertLine(inputLine, lineIndex) {
       } 
 
       if (anyChanges) {
-        log(`PASS`, pass, wordsJoined);
+        log(pass, wordsJoined, ` [${operationName}]`);
       }
     }
     passes.push(wordsJoined);
@@ -313,51 +313,51 @@ function convertLine(inputLine, lineIndex) {
 
 
   // initial state
-  progress(breakBySpaces(inputLine));
+  progress('START', breakBySpaces(inputLine));
   
   // This is needed but screws up y! (you!) done“ (doneth), me: to mewh
   // and leave Sca;ers as Scas (spellcheck....)
   const lowerProcessedLine = applyCase(inputLine);
 
   let words = breakBySpaces(lowerProcessedLine);
-  progress(words);
+  progress('applyCase', words);
 
   words = words.map(applyLowers);
-  progress(words);
+  progress('applyLowers', words);
 
   words = words.map(addShortFormWholeWords);
-  progress(words);
+  progress('addShortFormWholeWords', words);
 
   words = words.map(handleContractions);
-  progress(words);
+  progress('handleContractions', words);
 
   words = words.map(handlePrefixes);
-  progress(words);
+  progress('handlePrefixes', words);
 
   words = words.map(handleQuotes);
-  progress(words);
+  progress('handleQuotes', words);
 
   words = words.map(addSingleLetterContractions);
-  progress(words);
+  progress('addSingleLetterContractions', words);
 
   words = words.map(addShortFormPartWords);
-  progress(words);
+  progress('addShortFormPartWords', words);
 
   words = words.map(translateLetters); // DO NOT place this before addSingleLetterContractions
-  progress(words);
+  progress('translateLetters', words);
 
   // only effect on Chamber of Secrets is Mu7le to Muggle - really should go before translateLetters I think but breaks things
   // words = words.map(addMidWordLowerContractions);
   // progress(words);
 
   words = words.map(handleQuestionMarks);
-  progress(words);
+  progress('handleQuestionMarks', words);
 
   words = words.map(addWordSigns);
-  progress(words);
+  progress('addWordSigns', words);
 
   words = words.map(applyModifiers); // MUST go last
-  progress(words);
+  progress('applyModifiers', words);
 
   let line = addEllipses(words.join(' '));
   
