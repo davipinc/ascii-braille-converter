@@ -21,19 +21,23 @@ async function convert(fileName = '', lines = '', logLevel = '') {
   const shortForms = await getShortForms();
   const fileContents = await loadFile(fileName);
   const isFormalBRF = fileName.toLowerCase().indexOf('.brf') >= 0;
+  const baseName = fileName.replace(/\.brf$/i, '');
   
   let startLine = 0;
   let endLine = Infinity;
+  let filePart = '';
   const startEndReg = /^([0-9]+)-([0-9]+)$/;
   const singleLineReg = /^([0-9]+)$/;
 
   if (lines.match(startEndReg)) {
     startLine = parseInt(lines.replace(startEndReg, '$1'), 10);
     endLine = parseInt(lines.replace(startEndReg, '$2'), 10);
+    filePart = `__range`;
     console.info('Range mode:', startLine, endLine);
   } else if (lines.match(singleLineReg)) {
     startLine = parseInt(lines, 10);
     endLine = startLine;
+    filePart = `__line`;
     console.info('Single line mode', startLine);
   } else {
     console.info('Document mode', startLine);
@@ -56,7 +60,8 @@ async function convert(fileName = '', lines = '', logLevel = '') {
     lowerContractions,
     shortForms
   );
-  await fs.writeFile(`./output/${fileName}`, asciiVersion, "utf8");
+
+  await fs.writeFile(`./output/${baseName}${filePart}.brf`, asciiVersion, "utf8");
 
   const reportArray = getReports();
   if (reportArray.length) {
