@@ -17,7 +17,7 @@ const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 
 const brailleChars = 'a-z\\?\\+\\/$';
 const leadingPunc = '8,“';
-const trailingPunc = ',”';
+const trailingPunc = ',”14';
 
 function trimQuoteAndQMark(word) {
   if (word !== leadingQuote) {
@@ -235,7 +235,7 @@ function convertLine(inputLine, lineIndex) {
   }
 
   function processContractions(word = '', regexp, replacement = '') {
-    // console.log('reg', word, reg);
+    // console.log('regexp', word, regexp);
     return word.replace(regexp, (match, start, middle, end) => {
       const translated = `${start}${replacement}${end}`;
       // console.log('translated', word, match, translated);
