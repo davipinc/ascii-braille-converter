@@ -5,6 +5,8 @@ const dictionary = require('./dictionary/words_dictionary.json');
 const START_QUOTE = '“';
 const UPPERCASE_MODIFIER = ',';
 
+const vowelsRegExp = /[aeiouy]/i;
+
 const punct = `,\\.\\-?'"“”`; // not that 8 means different things leading or trailing
 const leadingPunct = `${punct}`; // adds punctuation only seen leading
 const trailingPunct = `${punct}`; // adds punctuation only seen trailing
@@ -15,9 +17,12 @@ const trailingPunctuationRegExp = new RegExp(`[${trailingPunct}]+$`);
 const leadingQuoteRegExp = new RegExp(`^[${leadingQuote}]`);
 const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 
+// for short forms - needs merging with the above similarly named vars - cautiously!
 const brailleChars = 'a-z\\?\\+\\/$';
 const leadingPunc = '8,“';
 const trailingPunc = ',”14';
+const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
+const trailingPuncGroup = `(?:[${trailingPunc}]*)`;
 
 function trimQuoteAndQMark(word) {
   if (word !== leadingQuote) {
@@ -40,8 +45,13 @@ function breakBySpaces(line = '') {
   return line.split(/\s+/);
 }
 
+function hasVowels(word) {
+  return vowelsRegExp.exec(word);
+}
+
 function wordExists(word) {
-  return dictionary[trimPunctuation(word.toLowerCase())];
+  // check there are any vowels because the present dictionary contains ludicrous non-words like 'bl', blocking 'blind'
+  return hasVowels(word) && dictionary[trimPunctuation(word.toLowerCase())];
 }
 
 function getAsciiVersion(
@@ -133,7 +143,7 @@ function convertLine(inputLine, lineIndex) {
   };
   const trace = (...args) => {
     if (!options.trace) return;
-    console.trace(`L:${lineIndex+1}`, ...args);
+    console.debug(`L:${lineIndex+1}`, ...args);
   };
 
   function handleContractions(word = '') {
@@ -245,8 +255,6 @@ function convertLine(inputLine, lineIndex) {
 
 
   function applyLowers(word = '') {
-    const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
-    const trailingPuncGroup = `(?:[${trailingPunc}]*)`;
     Object.keys(lowerContractions.start).forEach( char => {
       const replacement = trimHyphens(lowerContractions.start[char]);
       const reg = new RegExp(`^(${leadingPuncGroup})([${char}])([${brailleChars}]+${trailingPuncGroup})$`,"gi");
@@ -281,19 +289,20 @@ function convertLine(inputLine, lineIndex) {
   }
 
   const psvShortForms = Object.keys(shortForms).join('|');
-  const shortFormRegExp = new RegExp(`(?:[${leadingPunct}]+)?(${psvShortForms})(?:[${trailingPunct}]+)?`, 'ig');
+  const shortFormRegExp = new RegExp(`(${leadingPuncGroup})(${psvShortForms})(${trailingPuncGroup})`, 'ig');
 
   function replaceAllShortForms(word) {
     // eslint-disable-next-line no-unused-vars
-    const shortFormised = word.replace(shortFormRegExp, (_match = '', part, index) => {
+    const shortFormised = word.replace(shortFormRegExp, (_match = '', leading, part, trailing, index) => {
+      // console.log('part', leading, part, trailing)
       const shortFormWordPart = shortForms[part.toLowerCase()];
       const nextChar = word.charAt(index + part.length);
       const noVowelsAfterThis = ['after', 'blind', 'friend'].indexOf(shortFormWordPart) >=0;
-      if (noVowelsAfterThis && nextChar.match(/[aeiouy]/i)) {
+      if (noVowelsAfterThis && nextChar.match(vowelsRegExp)) {
         // super-specific vowel rule (see http://www.brl.org/intro/session09/short.html)
         return part;
       }
-      return shortFormWordPart;
+      return `${leading}${shortFormWordPart}${trailing}`;
     });
     
     if (wordExists(shortFormised)) {
@@ -306,17 +315,17 @@ function convertLine(inputLine, lineIndex) {
 
   function addShortFormPartWords(word) {
     if (!shortFormRegExp.exec(word)) {
-      // no short forms here
+      // console.info('no short forms here', word);
       return word;
     }
 
     if (wordExists(word)) {
-      // this is already a word, leave it alone
+      // console.info('this is already a word, leave it alone', word);
       return word;
     }
 
     if (trimPunctuation(word).indexOf(`'`) >= 1) {
-      // don't mess with words with apostrophes - watch out for "what'll" -> "what'little"
+      // console.info('do not mess with words with apostrophes', word); // watch out for "what'll" -> "what'little"
       return word;
     }
 
