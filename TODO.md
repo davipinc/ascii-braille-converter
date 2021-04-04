@@ -13,7 +13,8 @@ Usage
 - short forms with brackets showing 2 words e.g. mst / m(st)
 - handle numbers
 - Final Groupsign
-
+- `Mc,gonagall` - mid word uppercase...
+- `H,dmaster`
 - const italicsRegExp = /^(.,)(.*)(,)$/;
 - `_st` seems to be `/`
 - ` ":#aj` (line) is page break with number
