@@ -19,8 +19,8 @@ const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 
 // for short forms - needs merging with the above similarly named vars - cautiously!
 const brailleChars = 'a-z?+\\/$'; // char ';' must not go at the end of the line
-const leadingPunc = '8,';
-const trailingPunc = ',14';
+const leadingPunc = '8,(';
+const trailingPunc = ',14)';
 const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
 const trailingPuncGroup = `(?:[${trailingPunc}]*)`;
 
@@ -323,6 +323,14 @@ function convertLine(inputLine, lineIndex) {
     });
     return line;
   }
+
+  function replaceBraillePunctuation(line = '') {
+    Object.keys(braillePunctuation).forEach(char => {
+      line = line.replace(char, braillePunctuation[char]);
+    });
+    return line;
+  }
+
   function convertBrailleNumber(string = '') {
     return string.replace(/./g, letter => {
       const num = brailleNumberForLetter[letter];
@@ -341,8 +349,23 @@ function convertLine(inputLine, lineIndex) {
     });
   }
 
-  function removeNumberMarkers(word = '') {
-    return word.replace(/#/g, '');
+  const braillePunctuation = {
+    // just easier to handle this after translation
+    '"<': ' #(# ',
+    '">3': ' #):# ',
+    '">4': ' #).# ',    
+    '">1': ' #),# ',
+    '">': ' #)# '
+  };
+
+  function removeMarkers(line = '') {
+    line = line.replace(/ #\(# /g, ' (');
+    line = line.replace(/ #\):# /g, '): ');
+    line = line.replace(/ #\),# /g, '), ');
+    line = line.replace(/ #\).# /g, '). ');      
+    line = line.replace(/ #\)# /g, ') ');
+    line = line.replace(/#/g, '');
+    return line;
   }
 
   function replaceAllShortForms(word) {
@@ -417,8 +440,9 @@ function convertLine(inputLine, lineIndex) {
   const lowerProcessedLine = applyCase(inputLine);
 
   const noMarkupLine = replaceBookMarkupCharacters(lowerProcessedLine);
+  const punctuatedLine = replaceBraillePunctuation(noMarkupLine);
 
-  let words = breakBySpaces(noMarkupLine);
+  let words = breakBySpaces(punctuatedLine);
   progress('applyCase', words);
   
   words = words.map(addNumbers);
@@ -461,13 +485,10 @@ function convertLine(inputLine, lineIndex) {
   words = words.map(addWordSigns);
   progress('addWordSigns', words);
 
-  words = words.map(removeNumberMarkers);
-  progress('removeNumberMarkers', words);
-
   words = words.map(applyModifiers); // MUST go last
   progress('applyModifiers', words);
 
-  let line = addEllipses(words.join(' '));
+  let line = removeMarkers(addEllipses(words.join(' ')));
   
   return line;
 }
