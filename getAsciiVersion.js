@@ -123,7 +123,11 @@ function regexpSafe(string = '') {
   return string.replace(/([\\|^$?])/g, '\\$1');
 }
 
+// can't seem to protect against these
+const knownMuckedUpWords = ['throughree'];
+
 function addBrailleOnlyContractions(word) {
+  const startWord = word;
   const notWordEdge = `(?![ ${leadingPunc}]+)`;
   Object.keys(brailleOnlyContractions.chars).filter(onlyMultiLetter).forEach(contraction => {
     if (word.indexOf(contraction) >= 0) {
@@ -133,6 +137,16 @@ function addBrailleOnlyContractions(word) {
       word = word.replace(reg, `${replacement}`);
     }
   });
+
+  // if (startWord !== word && !wordExists(word)) {
+  //   // not a word, don't risk it e.g. '"?ree' -> 'throughree'
+  //   console.log('worrying', word);
+  // }
+
+  if (knownMuckedUpWords.indexOf(word) >= 0 ) {
+    return startWord;
+  }
+
   return word;
 }
 
