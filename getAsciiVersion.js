@@ -21,7 +21,7 @@ const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 const brailleChars = 'a-z?+9\\/$';
 const brailleMids = '\\];'; // these characters must not go at the end of the word
 const leadingPunc = '8,';
-const trailingPunc = ',.\\-123468';
+const trailingPunc = ',.\\-0123468';
 const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
 const trailingPuncGroup = `(?:[${trailingPunc}]*)`;
 
