@@ -1,6 +1,6 @@
 1	…	…	-ea-	,
-2	be	be-	-bb-	;
-3	…	con-	-cc-	:
+2	be	be-	-bb-	;	It is ; really for end of word but this avoids double-encoding
+3	…	con-	-cc-	…
 4	…	dis-	. (dot)	.
 5	enough	en	en	en
 6	…	…	-ff-	…	It is ! really for end of word but this avoids double-encoding
