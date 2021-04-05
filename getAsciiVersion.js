@@ -18,9 +18,9 @@ const leadingQuoteRegExp = new RegExp(`^[${leadingQuote}]`);
 const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 
 // for short forms - needs merging with the above similarly named vars - cautiously!
-const brailleChars = 'a-z\\?\\+\\/$';
-const leadingPunc = '8,“';
-const trailingPunc = ',”14';
+const brailleChars = 'a-z?+\\/$'; // char ';' must not go at the end of the line
+const leadingPunc = '8,';
+const trailingPunc = ',14';
 const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
 const trailingPuncGroup = `(?:[${trailingPunc}]*)`;
 
@@ -132,6 +132,7 @@ function getSuffixLetters(suffixCharacter = '', suffixLetter = '') {
 
   return noLeadingHyphenSuffix;
 }
+
 function convertLine(inputLine, lineIndex) {
   const log = (...args) => {
     console.log(`L:${lineIndex+1}`, ...args);
@@ -145,6 +146,10 @@ function convertLine(inputLine, lineIndex) {
     if (!options.trace) return;
     console.debug(`L:${lineIndex+1}`, ...args);
   };
+
+  // moving this outside convertLine causes regressions on "hm." at start of line
+  const psvShortForms = Object.keys(shortForms).join('|');
+  const shortFormRegExp = new RegExp(`(${leadingPuncGroup})(${psvShortForms})(${trailingPuncGroup})`, 'ig');
 
   function handleContractions(word = '') {
     return word.replace(/(["^;_.])([a-z!])/ig, (match, dotType, suffixCharacter) => {
@@ -257,19 +262,19 @@ function convertLine(inputLine, lineIndex) {
   function applyLowers(word = '') {
     Object.keys(lowerContractions.start).forEach( char => {
       const replacement = trimHyphens(lowerContractions.start[char]);
-      const reg = new RegExp(`^(${leadingPuncGroup})([${char}])([${brailleChars}]+${trailingPuncGroup})$`,"gi");
+      const reg = new RegExp(`^(${leadingPuncGroup})([${char}])([${brailleChars}]+?${trailingPuncGroup})$`,"gi");
       word = processContractions(word, reg, replacement);
     });
 
     Object.keys(lowerContractions.middle).forEach( char => {
       const replacement = trimHyphens(lowerContractions.middle[char]);
-      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+)([${char}])([${brailleChars}]+${trailingPuncGroup})$`,"gi");
+      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+?)([${char}])([${brailleChars}]+?${trailingPuncGroup})$`,"gi");
       word = processContractions(word, reg, replacement);
     });
         
     Object.keys(lowerContractions.end).forEach( char => {
       const replacement = trimHyphens(lowerContractions.end[char]);
-      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+)([${char}])(${trailingPuncGroup})$`,"gi");
+      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+?)([${char}])(${trailingPuncGroup})$`,"gi");
       word = processContractions(word, reg, replacement);
     });
 
@@ -287,9 +292,6 @@ function convertLine(inputLine, lineIndex) {
   function addEllipses(line = '') {
     return line.replace(/,-/g, '...');
   }
-
-  const psvShortForms = Object.keys(shortForms).join('|');
-  const shortFormRegExp = new RegExp(`(${leadingPuncGroup})(${psvShortForms})(${trailingPuncGroup})`, 'ig');
 
   function replaceAllShortForms(word) {
     // eslint-disable-next-line no-unused-vars
@@ -383,14 +385,14 @@ function convertLine(inputLine, lineIndex) {
   words = words.map(addSingleLetterContractions);
   progress('addSingleLetterContractions', words);
 
-  words = words.map(addShortFormPartWords);
-  progress('addShortFormPartWords', words);
-
   words = words.map(addBrailleOnlyContractions);
   progress('addBrailleOnlyContractions', words);
 
   words = words.map(translateLetters); // DO NOT place this before addSingleLetterContractions
   progress('translateLetters', words);
+
+  words = words.map(addShortFormPartWords);
+  progress('addShortFormPartWords', words);
 
   // only effect on Chamber of Secrets is Mu7le to Muggle - really should go before translateLetters I think but breaks things
   // words = words.map(addMidWordLowerContractions);
