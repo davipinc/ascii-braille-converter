@@ -6,7 +6,7 @@ Usage
 
 # TODO
 
-- ';[a-z]' means don't change the letter (e.g this is 'M')
+- ';[a-z]' means don't change the letter (e.g this is 'M'), fix line 519
 - ',,,' = uppercase sentence
 ' ',,' = uppercase word
 - line 2018 has weird sequence '.7,!' for 'The' - italic I think
@@ -18,3 +18,5 @@ Usage
 - const italicsRegExp = /^(.,)(.*)(,)$/;
 - `_st` seems to be `/`
 - ` ":#aj` (line) is page break with number
+- '^ste' is e acute i.e. 'S^stean' = Séan
+- check line 1971
