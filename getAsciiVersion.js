@@ -21,7 +21,7 @@ const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 const brailleChars = 'a-z?+9\\/$';
 const brailleMids = '\\];'; // these characters must not go at the end of the word
 const leadingPunc = '8,(';
-const trailingPunc = ',14)';
+const trailingPunc = ',12346)';
 const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
 const trailingPuncGroup = `(?:[${trailingPunc}]*)`;
 
@@ -299,7 +299,7 @@ function convertLine(inputLine, lineIndex) {
     Object.keys(lowerContractions.middle).forEach( char => {
       const replacement = trimHyphens(lowerContractions.middle[char]);
       const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+?[${brailleMids}]*?)([${char}])([${brailleMids}]*?[${brailleChars}]+?${trailingPuncGroup})$`,"gi");
-      // console.log(word, reg, replacement);
+      // console.log('regexp', word, reg, replacement);
       word = processContractions(word, reg, replacement);
     });
         
