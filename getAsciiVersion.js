@@ -18,7 +18,8 @@ const leadingQuoteRegExp = new RegExp(`^[${leadingQuote}]`);
 const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 
 // for short forms - needs merging with the above similarly named vars - cautiously!
-const brailleChars = 'a-z?+9\\/$'; // char ';' must not go at the end of the line
+const brailleChars = 'a-z?+9\\/$';
+const brailleMids = '\\];'; // these characters must not go at the end of the word
 const leadingPunc = '8,(';
 const trailingPunc = ',14)';
 const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
@@ -291,19 +292,20 @@ function convertLine(inputLine, lineIndex) {
   function applyLowers(word = '') {
     Object.keys(lowerContractions.start).forEach( char => {
       const replacement = trimHyphens(lowerContractions.start[char]);
-      const reg = new RegExp(`^(${leadingPuncGroup})([${char}])([${brailleChars}]+?${trailingPuncGroup})$`,"gi");
+      const reg = new RegExp(`^(${leadingPuncGroup})([${char}])([${brailleMids}]*?[${brailleChars}]+?${trailingPuncGroup})$`,"gi");
       word = processContractions(word, reg, replacement);
     });
 
     Object.keys(lowerContractions.middle).forEach( char => {
       const replacement = trimHyphens(lowerContractions.middle[char]);
-      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+?)([${char}])([${brailleChars}]+?${trailingPuncGroup})$`,"gi");
+      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+?[${brailleMids}]*?)([${char}])([${brailleMids}]*?[${brailleChars}]+?${trailingPuncGroup})$`,"gi");
+      // console.log(word, reg, replacement);
       word = processContractions(word, reg, replacement);
     });
         
     Object.keys(lowerContractions.end).forEach( char => {
       const replacement = trimHyphens(lowerContractions.end[char]);
-      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+?)([${char}])(${trailingPuncGroup})$`,"gi");
+      const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+?[${brailleMids}]*?)([${char}])(${trailingPuncGroup})$`,"gi");
       word = processContractions(word, reg, replacement);
     });
 
