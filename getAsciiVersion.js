@@ -47,8 +47,11 @@ const brailleNumberForLetter = {
 
 const shortFormTrickyList = {
   // hard to pick up due to word borders
-  'y’ve': `you've`,
-  'y’re': `you're`
+  'y’ve': `you’ve`,
+  'y’re': `you’re`,
+  'c’t': 'can’t',
+  'x’ll': 'it’ll',
+  'x’s': 'it’s'
 };
 
 function trimQuoteAndQMark(word) {
