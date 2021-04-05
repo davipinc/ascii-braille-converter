@@ -20,8 +20,8 @@ const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 // for short forms - needs merging with the above similarly named vars - cautiously!
 const brailleChars = 'a-z?+9\\/$';
 const brailleMids = '\\];'; // these characters must not go at the end of the word
-const leadingPunc = '8,(';
-const trailingPunc = ',12346)';
+const leadingPunc = '8,';
+const trailingPunc = ',.\\-12346';
 const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
 const trailingPuncGroup = `(?:[${trailingPunc}]*)`;
 
@@ -193,32 +193,36 @@ function convertLine(inputLine, lineIndex) {
       return `${prefix}${getSuffixLetters(suffixCharacter, suffix)}`;
     });
   }
+ 
+  function processContractions(word = '', regexp, replacement = '') {
+    // console.log('regexp', word, regexp);
+    return word.replace(regexp, (match, start, middle, end) => {
+      const translated = `${start}${replacement}${end}`;
+      // console.log('translated', word, match, translated);
+      return translated;
+    });      
+  } 
 
   function addSingleLetterContractions(word = '') {
     const isWhitespaceOnly = word.match(/^\s+$/);
-    const isLongerThanOneLetter = trimPunctuation(word).length > 1;
-    if (isWhitespaceOnly || isLongerThanOneLetter) return word;
+    if (isWhitespaceOnly) return word;
     const contraction = trimPunctuation(word).toLowerCase();
     debug('contraction', word, contraction);
 
-    if (alphaContractions.alone[contraction]) {
-      Object.keys(alphaContractions.alone)
-        .forEach(letter => {
+    Object.keys(alphaContractions.alone).forEach( char => {
+      const replacement = trimHyphens(alphaContractions.alone[char]);
+      const reg = new RegExp(`^(${leadingPuncGroup})([${char}])(${trailingPuncGroup})$`,"gi");
+      // console.log('regexp', word, reg, replacement);
+      word = processContractions(word, reg, replacement);
+    });
 
-          const contractionRegExp = new RegExp(`\\b[${letter}]\\b`, 'i');
-          word = word.replace(contractionRegExp, `${alphaContractions.alone[letter]}`);
-        }
-      );
-    }
 
-    if (lowerContractions.alone[contraction]) {
-      Object.keys(lowerContractions.alone)
-        .forEach(letter => {
-          const contractionRegExp = new RegExp(`\\b[${letter}]\\b`, 'i');
-          word = word.replace(contractionRegExp, `${lowerContractions.alone[letter]}`);
-        }
-      );
-    }
+    Object.keys(lowerContractions.alone).forEach( char => {
+      const replacement = trimHyphens(lowerContractions.alone[char]);
+      const reg = new RegExp(`^(${leadingPuncGroup})([${char}])(${trailingPuncGroup})$`,"gi");
+      // console.log('regexp', word, reg, replacement);
+      word = processContractions(word, reg, replacement);
+    });    
       
     //if (alphaContractions.alone[contraction]) return alphaContractions.alone[contraction];
     // if (lowerContractions.alone[contraction]) return lowerContractions.alone[contraction];
@@ -280,16 +284,6 @@ function convertLine(inputLine, lineIndex) {
     return line;
   }
 
-  function processContractions(word = '', regexp, replacement = '') {
-    // console.log('regexp', word, regexp);
-    return word.replace(regexp, (match, start, middle, end) => {
-      const translated = `${start}${replacement}${end}`;
-      // console.log('translated', word, match, translated);
-      return translated;
-    });      
-  }
-
-
   function applyLowers(word = '') {
     Object.keys(lowerContractions.start).forEach( char => {
       const replacement = trimHyphens(lowerContractions.start[char]);
@@ -321,8 +315,9 @@ function convertLine(inputLine, lineIndex) {
     return word;
   }
 
-  function addEllipses(line = '') {
-    return line.replace(/,-/g, '...');
+  function addEnDash(line = '') {
+    return line;
+    // return line.replace(/,-/g, ' -- ');
   }
 
   function replaceBookMarkupCharacters(line = '') {
@@ -333,8 +328,11 @@ function convertLine(inputLine, lineIndex) {
   }
 
   function replaceBraillePunctuation(line = '') {
-    Object.keys(braillePunctuation).forEach(char => {
-      line = line.replace(char, braillePunctuation[char]);
+    braillePunctuation.forEach(arr => {
+      const chars = arr[0];
+      const replacement = arr[1];
+      const reg = new RegExp(`${chars}`, 'gi');
+      line = line.replace(reg, replacement);
     });
     return line;
   }
@@ -357,15 +355,18 @@ function convertLine(inputLine, lineIndex) {
     });
   }
 
-  const braillePunctuation = {
+  const braillePunctuation = [
     // just easier to handle this after translation
-    '"<': ' #(# ',
-    '">3': ' #):# ',
-    '">4': ' #).# ',    
-    '">1': ' #),# ',
-    '">': ' #)# '
-    //',-': ' #ELLIPSIS#'
-  };
+    ['"<', ' #(# '],
+    ['">3', ' #):# '],
+    ['">4', ' #).# '],    
+    ['">1', ' #),# '],
+    ['">', ' #)# '],
+    [',-0', ' #ENDASHQUOTE# '],
+    [',-', ' #ENDASH# '],
+    ['4440', ' #ELLIPSISQUOTE#'],
+    ['444', ' #ELLIPSIS#']
+  ];
 
   function removeMarkers(line = '') {
     line = line.replace(/ #\(# /g, ' (');
@@ -373,7 +374,10 @@ function convertLine(inputLine, lineIndex) {
     line = line.replace(/ #\),# /g, '), ');
     line = line.replace(/ #\).# /g, '). ');      
     line = line.replace(/ #\)# /g, ') ');     
-    //line = line.replace(/ #ELLIPSIS#/g, '... ');
+    line = line.replace(/ #ELLIPSISQUOTE#/g, '... ”');
+    line = line.replace(/ #ELLIPSIS#/g, '... ');
+    line = line.replace(/ #ENDASHQUOTE#/g, ' - ”');
+    line = line.replace(/ #ENDASH# /g, ' - ');
     line = line.replace(/#/g, '');
     return line;
   }
@@ -408,7 +412,6 @@ function convertLine(inputLine, lineIndex) {
     // console.warn(`NOT RISKING THIS: '${shortFormised}' FOR '${word}`);
     return word;    
   }
-
 
   function addShortFormPartWords(word) {
     if (word && shortFormTrickyList[trimPunctuation(word)]) {
@@ -467,12 +470,15 @@ function convertLine(inputLine, lineIndex) {
   // This is needed but screws up y! (you!) done“ (doneth), me: to mewh
   // and leave Sca;ers as Scas (spellcheck....)
   const lowerProcessedLine = applyCase(inputLine);
+  progress('applyCase', breakBySpaces(lowerProcessedLine));
 
   const noMarkupLine = replaceBookMarkupCharacters(lowerProcessedLine);
+  progress('replaceBookMarkupCharacters', breakBySpaces(noMarkupLine));
+
   const punctuatedLine = replaceBraillePunctuation(noMarkupLine);
+  progress('replaceBraillePunctuation', breakBySpaces(punctuatedLine));
 
   let words = breakBySpaces(punctuatedLine);
-  progress('applyCase', words);
   
   words = words.map(addNumbers);
   progress('addNumbers', words);
@@ -517,7 +523,7 @@ function convertLine(inputLine, lineIndex) {
   words = words.map(applyModifiers); // MUST go last
   progress('applyModifiers', words);
 
-  let line = removeMarkers(addEllipses(words.join(' ')));
+  let line = removeMarkers(addEnDash(words.join(' ')));
   
   return line;
 }
