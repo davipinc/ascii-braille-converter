@@ -18,7 +18,7 @@ const leadingQuoteRegExp = new RegExp(`^[${leadingQuote}]`);
 const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 
 // for short forms - needs merging with the above similarly named vars - cautiously!
-const brailleChars = 'a-z?+\\/$'; // char ';' must not go at the end of the line
+const brailleChars = 'a-z?+9\\/$'; // char ';' must not go at the end of the line
 const leadingPunc = '8,(';
 const trailingPunc = ',14)';
 const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
