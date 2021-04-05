@@ -20,8 +20,8 @@ const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 // for short forms - needs merging with the above similarly named vars - cautiously!
 const brailleChars = 'a-z?+9=\\\\/$';
 const brailleMids = `${brailleChars}\\]!;.*`; // these characters must not go at the end of the word
-const leadingPunc = '8,';
-const trailingPunc = ',.\\-0123468';
+const leadingPunc = '8,“';
+const trailingPunc = ',.\\-0123468”';
 const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
 const trailingPuncGroup = `(?:[${trailingPunc}]*)`;
 
@@ -403,7 +403,6 @@ function convertLine(inputLine, lineIndex) {
   function replaceAllShortForms(word) {
     // eslint-disable-next-line no-unused-vars
     const shortFormised = word.replace(shortFormRegExp, (_match = '', leading, part, trailing, index) => {
-      // console.log('part', leading, part, trailing)
       const shortFormWordPart = shortForms[part.toLowerCase()];
       const nextChar = word.charAt(index + part.length);
       const noVowelsAfterThis = ['after', 'blind', 'friend'].indexOf(shortFormWordPart) >=0;
@@ -439,11 +438,6 @@ function convertLine(inputLine, lineIndex) {
         word = processContractions(word, reg, replacement);
         // console.info('found tricky short form', word);
       });
-    }
-
-    if (!shortFormRegExp.exec(word)) {
-      // console.info('no short forms here', word);
-      return word;
     }
 
     if (wordExists(word)) {
