@@ -301,6 +301,7 @@ function convertLine(inputLine, lineIndex) {
     Object.keys(lowerContractions.end).forEach( char => {
       const replacement = trimHyphens(lowerContractions.end[char]);
       const reg = new RegExp(`^(${leadingPuncGroup}[${brailleChars}]+?[${brailleMids}]*?)([${char}])(${trailingPuncGroup})$`,"gi");
+      // console.log('regexp', word, reg, replacement);
       word = processContractions(word, reg, replacement);
     });
 
@@ -442,6 +443,7 @@ function convertLine(inputLine, lineIndex) {
   }
   
   function handleQuestionMarks(word) {
+    word = word.replace(/“$/g, '? ');
     return word.replace(/“”/g, '?”');
   }
 
