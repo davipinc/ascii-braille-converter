@@ -44,6 +44,11 @@ const brailleNumberForLetter = {
   '4': '.'
 };
 
+const shortFormTrickyList = {
+  // hard to pick up due to word borders
+  'y’ve': `you've`
+};
+
 function trimQuoteAndQMark(word) {
   if (word !== leadingQuote) {
     word = word.replace(leadingQuoteRegExp, '');
@@ -356,6 +361,7 @@ function convertLine(inputLine, lineIndex) {
     '">4': ' #).# ',    
     '">1': ' #),# ',
     '">': ' #)# '
+    //',-': ' #ELLIPSIS#'
   };
 
   function removeMarkers(line = '') {
@@ -363,7 +369,8 @@ function convertLine(inputLine, lineIndex) {
     line = line.replace(/ #\):# /g, '): ');
     line = line.replace(/ #\),# /g, '), ');
     line = line.replace(/ #\).# /g, '). ');      
-    line = line.replace(/ #\)# /g, ') ');
+    line = line.replace(/ #\)# /g, ') ');     
+    //line = line.replace(/ #ELLIPSIS#/g, '... ');
     line = line.replace(/#/g, '');
     return line;
   }
@@ -383,7 +390,7 @@ function convertLine(inputLine, lineIndex) {
     });
 
     const shortFormWordOnly = shortFormised.replace(/[’'!;]/g,'');
-    const missingAbbreviations = ['couldve','wouldve', 'mustve', 'first-years'];
+    const missingAbbreviations = ['couldve','wouldve', 'mustve', 'first-years', 'yve' ,'yd'];
     
     if (missingAbbreviations.indexOf(shortFormWordOnly)  >= 0) {
       return shortFormised;
@@ -401,6 +408,15 @@ function convertLine(inputLine, lineIndex) {
 
 
   function addShortFormPartWords(word) {
+    if (word && shortFormTrickyList[trimPunctuation(word)]) {
+      Object.keys(shortFormTrickyList).forEach( chars => {
+        const replacement = shortFormTrickyList[chars];
+        const reg = new RegExp(`^(${leadingPuncGroup})(${chars})(${trailingPuncGroup})$`,"gi");
+        word = processContractions(word, reg, replacement);
+        // console.info('found tricky short form', word);
+      });
+    }
+
     if (!shortFormRegExp.exec(word)) {
       // console.info('no short forms here', word);
       return word;
