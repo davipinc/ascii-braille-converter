@@ -19,7 +19,7 @@ const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 
 // for short forms - needs merging with the above similarly named vars - cautiously!
 const brailleChars = 'a-z?+9=\\\\/$';
-const brailleMids = '\\]!;'; // these characters must not go at the end of the word
+const brailleMids = `${brailleChars}\\]!;.*`; // these characters must not go at the end of the word
 const leadingPunc = '8,';
 const trailingPunc = ',.\\-0123468';
 const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
