@@ -9,7 +9,7 @@ const vowelsRegExp = /[aeiouy]/i;
 
 const punct = `,\\.\\-?'"“”`; // not that 8 means different things leading or trailing
 const leadingPunct = `${punct}`; // adds punctuation only seen leading
-const trailingPunct = `${punct}`; // adds punctuation only seen trailing
+const trailingPunct = `${punct}!`; // adds punctuation only seen trailing
 const leadingQuote = '8'; 
 const trailingQMark = '8'; 
 const leadingPunctuationRegExp = new RegExp(`^[${leadingPunct}]+`);
@@ -381,11 +381,21 @@ function convertLine(inputLine, lineIndex) {
       }
       return `${leading}${shortFormWordPart}${trailing}`;
     });
+
+    const shortFormWordOnly = shortFormised.replace(/[’'!;]/g,'');
+    const missingAbbreviations = ['couldve','wouldve', 'mustve', 'first-years'];
     
-    if (wordExists(shortFormised)) {
+    if (missingAbbreviations.indexOf(shortFormWordOnly)  >= 0) {
       return shortFormised;
     }
-    // report(`NOT RISKING THIS: ${shortFormised}`);
+
+    if (wordExists(shortFormWordOnly)) {
+      if (shortFormWordOnly.indexOf('fred') >=0) {
+        console.log(shortFormWordOnly);
+      }
+      return shortFormised;
+    }
+    // console.warn(`NOT RISKING THIS: '${shortFormised}' FOR '${word}`);
     return word;    
   }
 

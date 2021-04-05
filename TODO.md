@@ -6,6 +6,10 @@ Usage
 
 # TODO
 
+- ';[a-z]' means don't change the letter (e.g this is 'M')
+- ',,,' = uppercase sentence
+' ',,' = uppercase word
+- line 2018 has weird sequence '.7,!' for 'The' - italic I think
 - `“.,,ji7ery .,pokery!”` should be italicised ‘Jiggery pokery!’ 
 - `lessons "ghthough perh not Snape,`
 - `“I meant ^“pl,se^”!”`
