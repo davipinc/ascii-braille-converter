@@ -3,7 +3,7 @@
 3	…	con-	-cc-	:
 4	…	dis-	. (dot)	.
 5	enough	en	en	en
-6	…	…	-ff-	!
+6	…	…	-ff-	…	It is ! really for end of word but this avoids double-encoding
 7	were	…	-gg-	…
 8	his	"	…	?
 9	in	in	in	in
