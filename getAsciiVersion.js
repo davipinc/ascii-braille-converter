@@ -24,6 +24,26 @@ const trailingPunc = ',14';
 const leadingPuncGroup = `(?:[${leadingPunc}]*)`;
 const trailingPuncGroup = `(?:[${trailingPunc}]*)`;
 
+const bookMarkup = {
+  ' "3#': ' Page #',
+  ' "33333333333': '------------------------'
+};
+
+const brailleNumberForLetter = {
+  a: 1,
+  b: 2,
+  c: 3,
+  d: 4,
+  e: 5,
+  f: 6,
+  g: 7,
+  h: 8,
+  i: 9,
+  j: 0,
+  '"': '-',
+  '4': '.'
+};
+
 function trimQuoteAndQMark(word) {
   if (word !== leadingQuote) {
     word = word.replace(leadingQuoteRegExp, '');
@@ -66,6 +86,10 @@ function getAsciiVersion(
 const lines = arrayOfLines(options.forceLowercaseOnInput ? string.toLowerCase() : string);
 
 function translateLetters(word) {
+  if (word.indexOf('#')>=0) {
+    return word;
+  }
+
   const translated = word.replace(/./g, match => {
     if (mappings.chars[match]) {
       if (mappings.chars[match] === match.toLowerCase()) {
@@ -293,6 +317,34 @@ function convertLine(inputLine, lineIndex) {
     return line.replace(/,-/g, '...');
   }
 
+  function replaceBookMarkupCharacters(line = '') {
+    Object.keys(bookMarkup).forEach(char => {
+      line = line.replace(char, bookMarkup[char]);
+    });
+    return line;
+  }
+  function convertBrailleNumber(string = '') {
+    return string.replace(/./g, letter => {
+      const num = brailleNumberForLetter[letter];
+      if (num === undefined) {
+        console.error('Not a braille number', letter);
+        return '';
+      }
+      return num;
+    });
+  }
+
+  function addNumbers(word = '') {
+    return word.replace(/#([a-j"4]+)\b/g, (full, group) => {
+      // leave number marker in to prevent conversion into chars
+      return '#' + convertBrailleNumber(group);
+    });
+  }
+
+  function removeNumberMarkers(word = '') {
+    return word.replace(/#/g, '');
+  }
+
   function replaceAllShortForms(word) {
     // eslint-disable-next-line no-unused-vars
     const shortFormised = word.replace(shortFormRegExp, (_match = '', leading, part, trailing, index) => {
@@ -364,9 +416,14 @@ function convertLine(inputLine, lineIndex) {
   // and leave Sca;ers as Scas (spellcheck....)
   const lowerProcessedLine = applyCase(inputLine);
 
-  let words = breakBySpaces(lowerProcessedLine);
-  progress('applyCase', words);
+  const noMarkupLine = replaceBookMarkupCharacters(lowerProcessedLine);
 
+  let words = breakBySpaces(noMarkupLine);
+  progress('applyCase', words);
+  
+  words = words.map(addNumbers);
+  progress('addNumbers', words);
+  
   words = words.map(applyLowers);
   progress('applyLowers', words);
 
@@ -403,6 +460,9 @@ function convertLine(inputLine, lineIndex) {
 
   words = words.map(addWordSigns);
   progress('addWordSigns', words);
+
+  words = words.map(removeNumberMarkers);
+  progress('removeNumberMarkers', words);
 
   words = words.map(applyModifiers); // MUST go last
   progress('applyModifiers', words);
