@@ -18,7 +18,7 @@ const leadingQuoteRegExp = new RegExp(`^[${leadingQuote}]`);
 const trailingQMarkRegExp = new RegExp(`[${trailingQMark}]$`);
 
 // for short forms - needs merging with the above similarly named vars - cautiously!
-const brailleChars = 'a-z?+9=\\\\/$';
+const brailleChars = 'a-z?+59=\\\\/$';
 const brailleMids = `${brailleChars}\\-\\]!;.*`; // these characters must not go at the end of the word
 const leadingPunc = '8,“';
 const trailingPunc = ',.\\-0123468”';
@@ -421,9 +421,6 @@ function convertLine(inputLine, lineIndex) {
     }
 
     if (wordExists(shortFormWordOnly)) {
-      if (shortFormWordOnly.indexOf('fred') >=0) {
-        console.log(shortFormWordOnly);
-      }
       return shortFormised;
     }
     // console.warn(`NOT RISKING THIS: '${shortFormised}' FOR '${word}`);
