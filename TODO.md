@@ -7,16 +7,22 @@ Usage
 # TODO
 
 - ';[a-z]' means don't change the letter (e.g this is 'M'), fix line 519
-- ',,,' = uppercase sentence
-' ',,' = uppercase word
-- line 2018 has weird sequence '.7,!' for 'The' - italic I think
-- `“.,,jiery .,pokery!”` should be italicised ‘Jiggery pokery!’ 
-- `“,,i warned ythe i will not`
-- Final Groupsign
 - `Mc,gonagall` - mid word uppercase...
 - `H,dmaster`
-- const italicsRegExp = /^(.,)(.*)(,)$/;
 - `_st` seems to be `/`
-- ` ":#aj` (line) is page break with number
-- '^ste' is e acute i.e. 'S^stean' = Séan
 - check line 1971
+
+## NEEDING UNICODE OR HTML
+- '^ste' is e acute i.e. 'S^stean' = Séan
+
+## NEEDING ADDITIONAL MARKUP
+
+- '.7,' is 'Italics representing a title' - line 2018 has this sequence '.7,!' for 'The'
+- const italicsRegExp = /^(.,)(.*)(,)$/;
+- `“.,,jiery .,pokery!”` should be italicised ‘Jiggery pokery!’ 
+
+## MULTILINE
+
+- ',,,' = uppercase sentence
+- ',,' = uppercase word
+- `“,,i warned ythe i will not`
